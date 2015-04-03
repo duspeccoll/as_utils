@@ -101,7 +101,7 @@ sub get_json_request {
 	my $return;
 	if($resp->is_success) {
 		$return = decode_json($resp->decoded_content);
-	} else { die "An error occurred.\n"; }
+	} else { die "An error occurred: $resp->status_line\n"; }
 
 	$return;
 }
@@ -113,7 +113,7 @@ sub get_xml_request {
 	my $return;
 	if($resp->is_success) {
 		$return = $resp->decoded_content;
-	} else { die "An error occurred.\n"; }
+	} else { die "An error occurred: $resp->status_line\n"; }
 
 	$return;
 }
