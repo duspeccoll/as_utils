@@ -98,10 +98,10 @@ sub get_json_request {
 	my $req = HTTP::Request->new(GET => $_[0]);
 	$req->header('X-ArchivesSpace-Session' => $_[1]);
 	my $resp = $ua->request($req);
-	my $return;
+	my $return = decode_json($resp->decoded_content);
 	if($resp->is_success) {
 		$return = decode_json($resp->decoded_content);
-	} else { die "An error occurred.\n"; }
+	} else { die "An error occurred: $return->{error}\n"; }
 
 	$return;
 }
@@ -113,7 +113,7 @@ sub get_xml_request {
 	my $return;
 	if($resp->is_success) {
 		$return = $resp->decoded_content;
-	} else { die "An error occurred.\n"; }
+	} else { die "An error occurred: $resp->status_line\n"; }
 
 	$return;
 }
