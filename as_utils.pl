@@ -78,9 +78,7 @@ sub login {
 	}
 	print "\n";
 
-	my $server_endpoint = "$url/users/$login/login?password=$password";
-	my $req = HTTP::Request->new(POST => $server_endpoint);
-	my $resp = $ua->request($req);
+	my $resp = $ua->post("$url/users/$login/login?password=$password");
 	if($resp->is_success) {
 		my $response = decode_json($resp->decoded_content);
 		$session = $response->{session};
@@ -124,9 +122,7 @@ sub get_agent_class {
 # * session = the ArchivesSpace session ID, if needed
 
 sub get_json_request {
-	my $req = HTTP::Request->new(GET => $_[0]);
-	$req->header('X-ArchivesSpace-Session' => $_[1]);
-	my $resp = $ua->request($req);
+	my $resp = $ua->get($_[0], 'X-ArchivesSpace-Session' => $_[1]);
 	my $return = decode_json($resp->decoded_content);
 	if($resp->is_error) { die "An error occurred: $resp->status_line\n"; }
 
@@ -134,9 +130,7 @@ sub get_json_request {
 }
 
 sub get_xml_request {
-	my $req = HTTP::Request->new(GET => $_[0]);
-	$req->header('X-ArchivesSpace-Session' => $_[1]);
-	my $resp = $ua->request($req);
+	my $resp = $ua->get($_[0], 'X-ArchivesSpace-Session' => $_[1]);
 	my $return = $resp->decoded_content;
 	if($resp->is_error) { die "An error occurred: $resp->status_line\n"; }
 
