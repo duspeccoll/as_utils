@@ -3,6 +3,7 @@
 use strict;
 use warnings;
 use JSON;
+use JSON::Parse ':all';
 use Term::ReadKey;
 use LWP::UserAgent;
 use Switch;
@@ -33,7 +34,12 @@ sub get_file {
 		close $fh;
 	}
 
-	$json;
+	if(valid_json($json)) {
+		$json;
+	} else {
+		print "$f failed to validate, try again.\n";
+		$f = &get_file();
+	}
 }
 
 # login(url)
