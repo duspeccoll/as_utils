@@ -9,8 +9,16 @@ use LWP::UserAgent;
 use Switch;
 
 # initialize the user agent
-
 my $ua = LWP::UserAgent->new;
+
+# Utilities contained in this file, in order:
+#
+# 1. get_file
+# 2. login
+# 3. select_data_model
+# 4. get_agent_class
+# 5. get_request (contains json and xml as separate requests)
+
 
 # get_file()
 # Gets a file from user input.
@@ -93,6 +101,28 @@ sub login {
 	}
 
 	$session;
+}
+
+# select_data_model
+# Selects a data model from user input.
+
+sub select_data_model { 
+	my $model;
+	print "Select a data model:\n";
+	print "* (1) Resources\n";
+	print "* (2) Archival Objects\n";
+	$model = <STDIN>;
+	chomp($model);
+	switch($model) {
+		case 1 { $model = "resources"; }
+		case 2 { $model = "archival_objects"; }
+		else {
+			print "Invalid entry, try again.\n";
+			$model = &select_data_model();
+		}
+	}
+
+	$model;
 }
 
 # get_agent_class(path)
