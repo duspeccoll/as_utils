@@ -149,24 +149,19 @@ sub get_agent_class {
 	$class;
 }
 
-# get_request(url, session)
+# get_request(type, url, session)
 # Places an HTTP GET request with the ArchivesSpace backend.
 #
 # Params:
+# * type = the response type we expect to get back (JSON, XML, etc.)
 # * url = the URL to the backend server
 # * session = the ArchivesSpace session ID, if needed
 
-sub get_json_request {
-	my $resp = $ua->get($_[0], 'X-ArchivesSpace-Session' => $_[1]);
-	my $return = decode_json($resp->decoded_content);
-	if($resp->is_error) { die "An error occurred: $resp->status_line\n"; }
-
-	$return;
-}
-
-sub get_xml_request {
-	my $resp = $ua->get($_[0], 'X-ArchivesSpace-Session' => $_[1]);
-	my $return = $resp->decoded_content;
+sub get_request {
+	my $resp = $ua->get($_[1], 'X-ArchivesSpace-Session' => $_[2]);
+	if($_[0] eq "json") {
+		my $return = decode_json($resp->decoded_content);
+	} else { my $return = $resp->decoded_content; }
 	if($resp->is_error) { die "An error occurred: $resp->status_line\n"; }
 
 	$return;
