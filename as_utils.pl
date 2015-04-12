@@ -111,11 +111,16 @@ sub select_data_model {
 	print "Select a data model:\n";
 	print "* (1) Resources\n";
 	print "* (2) Archival Objects\n";
+	print "* (3) Agents\n";
+	print "* (4) Subjects\n";
+	print "> ";
 	$model = <STDIN>;
 	chomp($model);
 	switch($model) {
 		case 1 { $model = "resources"; }
 		case 2 { $model = "archival_objects"; }
+		case 3 { $model = "agents"; }
+		case 4 { $model = "subjects"; }
 		else {
 			print "Invalid entry, try again.\n";
 			$model = &select_data_model();
