@@ -11,9 +11,7 @@ use strict;
 use warnings;
 use LWP::UserAgent;
 use JSON;
-use Switch;
 use YAML::XS 'LoadFile';
-use Data::Dumper;
 
 require 'as_utils.pl';
 my $config = LoadFile('config.yml');
@@ -24,6 +22,7 @@ my $url = $config->{url};
 my $repo = $config->{repo};
 
 my $session = &login($url);
+$ua->default_header('X-ArchivesSpace-Session' => $session);
 my $model = &select_data_model();
 my $model_url;
 if($model eq "agents" or $model eq "subjects") {
@@ -33,16 +32,16 @@ print "Fetching array of $model...\n";
 my $resp;
 if($model eq "agents") {
 	# we need to do all four types of agents separately
-	$resp = $ua->get("$model_url/people?all_ids=true", 'X-ArchivesSpace-Session' => $session);
+	$resp = $ua->get("$model_url/people?all_ids=true");
 	&report_urls($resp, "$model_url/people");
-	$resp = $ua->get("$model_url/corporate_entities?all_ids=true", 'X-ArchivesSpace-Session' => $session);
+	$resp = $ua->get("$model_url/corporate_entities?all_ids=true");
 	&report_urls($resp, "$model_url/corporate_entities");
-	$resp = $ua->get("$model_url/families?all_ids=true", 'X-ArchivesSpace-Session' => $session);
+	$resp = $ua->get("$model_url/families?all_ids=true");
 	&report_urls($resp, "$model_url/families");
-	$resp = $ua->get("$model_url/software?all_ids=true", 'X-ArchivesSpace-Session' => $session);
+	$resp = $ua->get("$model_url/software?all_ids=true");
 	&report_urls($resp, "$model_url/software");
 } else {
-	$resp = $ua->get("$model_url?all_ids=true", 'X-ArchivesSpace-Session' => $session);
+	$resp = $ua->get("$model_url?all_ids=true");
 	&report_urls($resp, $model_url);
 }
 
