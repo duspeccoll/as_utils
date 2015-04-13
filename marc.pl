@@ -7,14 +7,15 @@ use JSON;
 use Switch;
 use MARC::Record;
 use MARC::File::XML ( BinaryEncoding => 'utf8', RecordFormat => 'MARC21' );
+use YAML::XS 'LoadFile';
 
 require 'as_utils.pl';
 
 my $ua = LWP::UserAgent->new;
 
 # constants; change these for your local environment
-my $backend = "http://localhost:8089";
-my $repo = "repositories/2";
+my $backend = $config->{url};
+my $repo = $config->{repo};
 
 my $session = &login($backend);
 my $colls = &get_request("json", "$backend/$repo/resources?all_ids=true", $session);
