@@ -12,13 +12,16 @@ use warnings;
 use LWP::UserAgent;
 use JSON;
 use Switch;
+use YAML::XS 'LoadFile';
+use Data::Dumper;
 
 require 'as_utils.pl';
+my $config = LoadFile('config.yml');
 
 # Initialize the user agent
 my $ua = LWP::UserAgent->new;
-my $url = "http://localhost:8089";
-my $repo = "repositories/2";
+my $url = $config->{url};
+my $repo = $config->{repo};
 
 my $session = &login($url);
 my $model = &select_data_model();
