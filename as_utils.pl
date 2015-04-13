@@ -113,6 +113,7 @@ sub select_data_model {
 	print "* (2) Archival Objects\n";
 	print "* (3) Agents\n";
 	print "* (4) Subjects\n";
+	print "* (5) Digital Objects\n";
 	print "> ";
 	$model = <STDIN>;
 	chomp($model);
@@ -121,6 +122,7 @@ sub select_data_model {
 		case 2 { $model = "archival_objects"; }
 		case 3 { $model = "agents"; }
 		case 4 { $model = "subjects"; }
+		case 5 { $model = "digital_objects"; }
 		else {
 			print "Invalid entry, try again.\n";
 			$model = &select_data_model();
@@ -158,10 +160,13 @@ sub get_agent_class {
 # * session = the ArchivesSpace session ID, if needed
 
 sub get_request {
+	my $return;
 	my $resp = $ua->get($_[1], 'X-ArchivesSpace-Session' => $_[2]);
 	if($_[0] eq "json") {
-		my $return = decode_json($resp->decoded_content);
-	} else { my $return = $resp->decoded_content; }
+		$return = decode_json($resp->decoded_content);
+	} else {
+		$return = $resp->decoded_content; 
+	}
 	if($resp->is_error) { die "An error occurred: $resp->status_line\n"; }
 
 	$return;
