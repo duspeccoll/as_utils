@@ -33,26 +33,42 @@ my $resp;
 if($model eq "agents") {
 	# we need to do all four types of agents separately
 	$resp = $ua->get("$model_url/people?all_ids=true");
-	&report_urls($resp, "$model_url/people");
+	&report_urls($resp, $model, "$model_url/people");
 	$resp = $ua->get("$model_url/corporate_entities?all_ids=true");
-	&report_urls($resp, "$model_url/corporate_entities");
+	&report_urls($resp, $model, "$model_url/corporate_entities");
 	$resp = $ua->get("$model_url/families?all_ids=true");
-	&report_urls($resp, "$model_url/families");
+	&report_urls($resp, $model, "$model_url/families");
 	$resp = $ua->get("$model_url/software?all_ids=true");
-	&report_urls($resp, "$model_url/software");
+	&report_urls($resp, $model, "$model_url/software");
 } else {
 	$resp = $ua->get("$model_url?all_ids=true");
-	&report_urls($resp, $model_url);
+	&report_urls($resp, $model, $model_url);
 }
 
 sub report_urls {
 	my $response = $_[0];
-	my $url = $_[1];
+	my $model = $_[1];
+	my $url = $_[2];
 	if($response->code() eq 404) { die "Error: ".$response->status_line().": $_[1]\n"; } else {
-		my $model_ids = decode_json($resp->decoded_content);
+		my $file_output = $model."_report.json";
+		if(-e $file_output) { unlink $file_output; }
+		print "Writing report to $file_output... \n";
+		open my $fh, '>>', $file_output or die "Error opening $file_output: $!\n";
+		print $fh "{\"records\":\[";
+		my $model_ids = decode_json($response->decoded_content);
+		my $size = @$model_ids;
+		my $i = 0;
 		for my $model_id (@$model_ids) {
+			$i++;
+			print "Writing $url record $i of $size...\r";
 			my $record_url = "$url/$model_id";
-			print "$record_url\n";
+			my $json_response = $ua->get($record_url);
+			my $record = $json_response->decoded_content;
+			print $fh $record;
+			if($i != $size) { print $fh ","; }
 		}
+		print $fh "\]}";
+		close $fh or die "Error closing $file_output: $!\n";
 	}
+	print "\n";
 }
