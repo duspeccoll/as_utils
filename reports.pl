@@ -2,8 +2,8 @@
 
 # reports.pl -- getting a bunch of ASpace data at once
 #
-# This is extremely bare-bones: just a bunch of URLs, none of which are pulled from the JSON.
-# Still working on extending it for various use cases.
+# Basically this just gets a list of IDs for each data model and then downloads the JSON for all of them.
+# From there I'd just run it through Open Refine or something, until I have time to do more interesting things with it.
 #
 # Once reports are functional I won't need these anymore but I don't want to wait that long to do reporting.
 
