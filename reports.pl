@@ -28,7 +28,6 @@ my $model_url;
 if($model eq "agents" or $model eq "subjects") {
 	$model_url = "$url/$model";
 } else { $model_url = "$url/$repo/$model"; }
-print "Fetching array of $model...\n";
 my $resp;
 if($model eq "agents") {
 	# we need to do all four types of agents separately
@@ -54,7 +53,7 @@ sub report_urls {
 		if(-e $file_output) { unlink $file_output; }
 		print "Writing report to $file_output... \n";
 		open my $fh, '>>', $file_output or die "Error opening $file_output: $!\n";
-		print $fh "{\"records\":\[";
+		print $fh "\[";
 		my $model_ids = decode_json($response->decoded_content);
 		my $size = @$model_ids;
 		my $i = 0;
