@@ -53,7 +53,7 @@ sub report_urls {
 		if(-e $file_output) { unlink $file_output; }
 		print "Writing report to $file_output... \n";
 		open my $fh, '>>', $file_output or die "Error opening $file_output: $!\n";
-		print $fh "\[";
+		print $fh "{\"$model\":\[";
 		my $model_ids = decode_json($response->decoded_content);
 		my $size = @$model_ids;
 		my $i = 0;
