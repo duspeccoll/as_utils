@@ -10,8 +10,8 @@ use MARC::File::XML ( BinaryEncoding => 'utf8', RecordFormat => 'MARC21' );
 use YAML::XS 'LoadFile';
 
 require 'as_utils.pl';
-
 my $ua = LWP::UserAgent->new;
+my $config = LoadFile('config.yml');
 
 # constants; change these for your local environment
 my $backend = $config->{url};
