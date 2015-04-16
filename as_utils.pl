@@ -144,7 +144,7 @@ sub get_agent_class {
 		case /^agents\/people\/\d+?$/ { $class = "people"; }
 		case /^agents\/corporate_entities\/\d+?$/ { $class = "corporate_entities"; }
 		case /^agents\/families\/\d+?$/ { $class = "families"; }
-		case /^agents\/software\/\d+?$/ { $class = "softwares"; }
+		case /^agents\/software\/\d+?$/ { $class = "software"; }
 		else { die "Invalid entry: $_[0]\n"; }
 	}
 

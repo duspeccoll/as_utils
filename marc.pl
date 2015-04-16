@@ -16,6 +16,7 @@ my $config = LoadFile('config.yml');
 # constants; change these for your local environment
 my $backend = $config->{url};
 my $repo = $config->{repo};
+my $marc_path = $config->{marc_path};
 
 my $session = &login($backend);
 my $colls = &get_request("json", "$backend/$repo/resources?all_ids=true", $session);
@@ -24,11 +25,22 @@ for my $coll (@$colls) {
 	my $json = &get_request("json", "$backend/$repo/resources/$coll", $session);
 	my $file = &get_request("xml", "$backend/$repo/resources/marc21/$coll.xml", $session);
 	my $id = lc($json->{id_0});
-	my $filename = "marc/$id"."_marc.xml";
+	my $filename = "$marc_path/$id"."_marc.xml";
 	# ArchivesSpace sometimes outputs fields even if no value is present, which causes errors.
 	# This next line deletes those fields to get around that.
 	$file =~ s/\s+?<.+?\/>//g;
 	my $record = MARC::Record->new_from_xml($file);
+
+	# We had to hack Sierra to supply ind2=0 for genre headings with a subfield 2 so they'd index properly. This accounts for that.
+	# Others would want to comment out or delete this next bit of code.
+	my $genre;
+	if($record->field('655')) { print "Genre heading found: $id\n"; }
+	foreach $genre ($record->field('655')) {
+		my $new_genre = $genre->clone();
+		$new_genre->update( 'ind2' => "0" );
+		$genre->replace_with($new_genre);
+	}
+
 	my $extdocs = $json->{external_documents};
 	for my $extdoc (@$extdocs) {
 		switch($extdoc->{title}) {
@@ -61,7 +73,7 @@ for my $coll (@$colls) {
 			}
 		}
 	}
+	if(-e $filename) { unlink $filename; }
 	my $file_out = MARC::File::XML->out($filename);
-	print "Writing $filename\n";
 	$file_out->write($record);
 }
