@@ -6,3 +6,6 @@ What's here:
 
 * as_utils.pl: These are sub-routines that get used in other Perl scripts
 * marc.pl: Script to batch export collection-level MARC records and modify them according to our local cataloging guidelines
+* reports.pl: Reports, mostly JSON, for each of the data models in ArchivesSpace
+
+These all need quite a bit of code review because I'm sure they're wildly inefficient. Haven't had time for that, though.
