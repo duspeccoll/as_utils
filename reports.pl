@@ -112,6 +112,7 @@ sub report_urls {
 					if(-e $file_output) { unlink $file_output; }
 					open my $fh, '>>', $file_output or die "Error opening $file_output: $!\n";
 					print $fh $record;
+					close $fh or die "Error closing $file_output: $!\n";
 				}
 			}
 		}
