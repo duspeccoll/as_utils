@@ -1,3 +1,6 @@
 ---
 url: "http://localhost:8089"
 repo: "repositories/2"
+marc_path: "/home/kevin/work/marc"
+eac_path: "/home/kevin/work/eac"
+json_path: "/home/kevin/work/json"

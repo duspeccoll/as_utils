@@ -11,7 +11,10 @@ use strict;
 use warnings;
 use LWP::UserAgent;
 use JSON;
+use Switch;
 use YAML::XS 'LoadFile';
+use open ':std', ':encoding(UTF-8)';
+binmode(STDOUT, ":utf8");
 
 require 'as_utils.pl';
 my $config = LoadFile('config.yml');
@@ -30,44 +33,88 @@ if($model eq "agents" or $model eq "subjects") {
 } else { $model_url = "$url/$repo/$model"; }
 my $resp;
 if($model eq "agents") {
+	my $report_type = &get_report_type($model);
 	# we need to do all four types of agents separately
 	$resp = $ua->get("$model_url/people?all_ids=true");
-	&report_urls($resp, $model, "$model_url/people");
+	&report_urls($resp, $report_type, "people", "$model_url/people");
 	$resp = $ua->get("$model_url/corporate_entities?all_ids=true");
-	&report_urls($resp, $model, "$model_url/corporate_entities");
+	&report_urls($resp, $report_type, "corporate_entities", "$model_url/corporate_entities");
 	$resp = $ua->get("$model_url/families?all_ids=true");
-	&report_urls($resp, $model, "$model_url/families");
+	&report_urls($resp, $report_type, "families", "$model_url/families");
 	$resp = $ua->get("$model_url/software?all_ids=true");
-	&report_urls($resp, $model, "$model_url/software");
+	&report_urls($resp, $report_type, "software", "$model_url/software");
 } else {
 	$resp = $ua->get("$model_url?all_ids=true");
-	&report_urls($resp, $model, $model_url);
+	&report_urls($resp, "json", $model, $model_url);
+}
+
+sub get_report_type {
+	my $report_type;
+	my $model = $_[0];
+	switch($model) {
+		case /agents/ {
+			print "Select report type:\n* (1) Generic JSON\n* (2) EAC-CPF\n> ";
+			$report_type = <STDIN>;
+			chomp($report_type);
+			switch($report_type) {
+				case 1 { $report_type = "json"; }
+				case 2 { $report_type = "eac"; }
+				else {
+					print "Invalid entry, try again.\n";
+					$report_type = &get_report_type($_[0]);
+				}
+			}
+		}
+		else { print "Other types not yet supported.\n"; }
+	}
+
+	$report_type;
 }
 
 sub report_urls {
 	my $response = $_[0];
-	my $model = $_[1];
-	my $url = $_[2];
-	if($response->code() eq 404) { die "Error: ".$response->status_line().": $_[1]\n"; } else {
-		my $file_output = $model."_report.json";
-		if(-e $file_output) { unlink $file_output; }
-		print "Writing report to $file_output... \n";
-		open my $fh, '>>', $file_output or die "Error opening $file_output: $!\n";
-		print $fh "{\"$model\":\[";
+	my $report_type = $_[1];
+	my $model = $_[2];
+	my $model_url = $_[3];
+	my $json_path = $config->{json_path};
+	my $eac_path = $config->{eac_path};
+	if($response->code() eq 404) { die "Error: ".$response->status_line().": $model\n"; } else {
 		my $model_ids = decode_json($response->decoded_content);
 		my $size = @$model_ids;
 		my $i = 0;
-		for my $model_id (@$model_ids) {
-			$i++;
-			print "Writing $url record $i of $size...\r";
-			my $record_url = "$url/$model_id";
-			my $json_response = $ua->get($record_url);
-			my $record = $json_response->decoded_content;
-			print $fh $record;
-			if($i != $size) { print $fh ","; }
+		switch($report_type) {
+			case /json/ {
+				my $file_output = "$json_path/$model"."_report.json";
+				if(-e $file_output) { unlink $file_output; }
+				print "Writing report to $file_output... \n";
+				open my $fh, '>>', $file_output or die "Error opening $file_output: $!\n";
+				print $fh "{\"$model\":\[";
+				for my $model_id (@$model_ids) { 
+					$i++;
+					print "Writing $model_url record $i of $size...\r";
+					my $json_response = $ua->get("$model_url/$model_id");
+					my $record = $json_response->decoded_content;
+					print $fh $record;
+					if($i < $size) { print $fh ","; }
+				}
+				print $fh "\]}";
+				close $fh or die "Error closing $file_output: $!\n";
+			}
+			case /eac/ {
+				if($model eq "software") { $model = "softwares"; }
+				for my $model_id (@$model_ids) {
+					$i++;
+					#print "Writing $url record $i of $size...\r";
+					print "$url/$repo/archival_contexts/$model/$model_id.xml\n";
+					my $xml_response = $ua->get("$url/$repo/archival_contexts/$model/$model_id.xml");
+					my $record = $xml_response->decoded_content;
+					my $file_output = "$eac_path/$model"."_"."$model_id"."_eac.xml";
+					if(-e $file_output) { unlink $file_output; }
+					open my $fh, '>>', $file_output or die "Error opening $file_output: $!\n";
+					print $fh $record;
+				}
+			}
 		}
-		print $fh "\]}";
-		close $fh or die "Error closing $file_output: $!\n";
 	}
 	print "\n";
 }
