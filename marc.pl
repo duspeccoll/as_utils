@@ -76,3 +76,4 @@ for my $coll (@$colls) {
 	my $file_out = MARC::File::XML->out($filename);
 	$file_out->write($record);
 }
+print "\n";

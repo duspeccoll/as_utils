@@ -160,14 +160,21 @@ sub get_agent_class {
 # * session = the ArchivesSpace session ID, if needed
 
 sub get_request {
+	my($type, $url, $session) = ($_[0], $_[1], $_[2]);
 	my $return;
-	my $resp = $ua->get($_[1], 'X-ArchivesSpace-Session' => $_[2]);
-	if($_[0] eq "json") {
-		$return = decode_json($resp->decoded_content);
-	} else {
-		$return = $resp->decoded_content; 
+	my $resp = $ua->get($url, 'X-ArchivesSpace-Session' => $session);
+	my $sl = $resp->status_line();
+	if($resp->is_success) {
+		if($type eq "json") {
+			$return = decode_json($resp->decoded_content);
+		} else {
+			$return = $resp->decoded_content; 
+		}
+	} else { 
+		print "Error: $sl: $url. Retrying... \n";
+		sleep 5;
+		$return = &get_request($type, $url, $session);
 	}
-	if($resp->is_error) { die "An error occurred: $resp->status_line\n"; }
-
+	
 	$return;
 }
