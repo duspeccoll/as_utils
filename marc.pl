@@ -34,7 +34,6 @@ for my $coll (@$colls) {
 	# We had to hack Sierra to supply ind2=0 for genre headings with a subfield 2 so they'd index properly. This accounts for that.
 	# Others would want to comment out or delete this next bit of code.
 	my $genre;
-	if($record->field('655')) { print "Genre heading found: $id\n"; }
 	foreach $genre ($record->field('655')) {
 		my $new_genre = $genre->clone();
 		$new_genre->update( 'ind2' => "0" );
