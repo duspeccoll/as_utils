@@ -19,11 +19,13 @@ my $repo = $config->{repo};
 my $marc_path = $config->{marc_path};
 
 my $session = &login($backend);
-my $colls = &get_request("json", "$backend/$repo/resources?all_ids=true", $session);
+my $colls = &get_request("$backend/$repo/resources?all_ids=true", $session);
+$colls = decode_json($colls);
 
 for my $coll (@$colls) {
-	my $json = &get_request("json", "$backend/$repo/resources/$coll", $session);
-	my $file = &get_request("xml", "$backend/$repo/resources/marc21/$coll.xml", $session);
+	my $json = &get_request("$backend/$repo/resources/$coll", $session);
+	$json = decode_json($json);
+	my $file = &get_request("$backend/$repo/resources/marc21/$coll.xml", $session);
 	my $id = lc($json->{id_0});
 	my $filename = "$marc_path/$id"."_marc.xml";
 	# ArchivesSpace sometimes outputs fields even if no value is present, which causes errors.

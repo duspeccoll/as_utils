@@ -7,9 +7,12 @@ use JSON::Parse ':all';
 use Term::ReadKey;
 use LWP::UserAgent;
 use Switch;
+use Data::Dumper;
 
 # initialize the user agent
+# (set the timeout super-high so I can download EACs with lots of linked objects)
 my $ua = LWP::UserAgent->new;
+$ua->timeout(10000);
 
 # Utilities contained in this file, in order:
 #
@@ -17,13 +20,11 @@ my $ua = LWP::UserAgent->new;
 # 2. login
 # 3. select_data_model
 # 4. get_agent_class
-# 5. get_request (contains json and xml as separate requests)
+# 5. get_request
 
 
 # get_file()
 # Gets a file from user input.
-#
-# TODO: Test if the JSON is valid
 
 sub get_file {
 	print "Enter a valid JSON file: ";
@@ -61,8 +62,6 @@ sub get_file {
 sub login {
 	my $url;
 	my $count;
-	my $login;
-	my $password;
 	my $session;
 
 	if($_[0]) { $url = $_[0]; } else {
@@ -70,20 +69,16 @@ sub login {
 		$url = <STDIN>;
 		chomp($url);
 	}
-	print "Logging into $url... \n";
 	if($_[1]) { $count = $_[1]; } else { $count = 0; }
-	if($_[2]) { $login = $_[2]; } else {
-		print "login: ";
-		$login = <STDIN>;
-		chomp($login);
-	}
-	if($_[3]) { $password = $_[3]; } else {
-		print "password: ";
-		ReadMode 2;
-		$password = <STDIN>;
-		chomp($password);
-		ReadMode 0;
-	}
+	print "Logging into $url... \n";
+	print "login: ";
+	my $login = <STDIN>;
+	chomp($login);
+	print "password: ";
+	ReadMode 2;
+	my $password = <STDIN>;
+	chomp($password);
+	ReadMode 0;
 	print "\n";
 
 	my $resp = $ua->post("$url/users/$login/login?password=$password");
@@ -98,6 +93,27 @@ sub login {
 			print "Login failed.\n";
 			$session = &login($url, $count);
 		}
+	}
+
+	return($login, $password, $session);
+}
+
+# new_session
+# Gets a new session ID if the last one expired and the login credentials are known.
+#
+# Parameters:
+# * url - the URL to the ArchivesSpace backend
+# * login - username
+# * password - password
+
+sub new_session {
+	my $session;
+	my $resp = $ua->post("$_[0]/users/$_[1]/login?password=$_[2]");
+	if($resp->is_success) {
+		my $response = decode_json($resp->decoded_content);
+		$session = $response->{session};
+	} else {
+		die "An error occurred.\n";
 	}
 
 	$session;
@@ -155,25 +171,21 @@ sub get_agent_class {
 # Places an HTTP GET request with the ArchivesSpace backend.
 #
 # Params:
-# * type = the response type we expect to get back (JSON, XML, etc.)
 # * url = the URL to the backend server
 # * session = the ArchivesSpace session ID, if needed
 
 sub get_request {
-	my($type, $url, $session) = ($_[0], $_[1], $_[2]);
+	my($url, $session) = ($_[0], $_[1]);
 	my $return;
 	my $resp = $ua->get($url, 'X-ArchivesSpace-Session' => $session);
 	my $sl = $resp->status_line();
 	if($resp->is_success) {
-		if($type eq "json") {
-			$return = decode_json($resp->decoded_content);
-		} else {
-			$return = $resp->decoded_content; 
-		}
+		$return = $resp->decoded_content;
 	} else { 
+		print Dumper $resp;
 		print "Error: $sl: $url. Retrying... \n";
 		sleep 5;
-		$return = &get_request($type, $url, $session);
+		$return = &get_request($url, $session);
 	}
 	
 	$return;

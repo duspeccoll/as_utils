@@ -36,13 +36,13 @@ if($model eq "agents") {
 	my $report_type = &get_report_type($model);
 	# we need to do all four types of agents separately
 	$resp = $ua->get("$model_url/people?all_ids=true");
-	&report_urls($resp, $report_type, "people", "$model_url/people");
+	&report_urls($resp, $report_type, "people", "$model_url/people", $session);
 	$resp = $ua->get("$model_url/corporate_entities?all_ids=true");
-	&report_urls($resp, $report_type, "corporate_entities", "$model_url/corporate_entities");
+	&report_urls($resp, $report_type, "corporate_entities", "$model_url/corporate_entities", $session);
 	$resp = $ua->get("$model_url/families?all_ids=true");
-	&report_urls($resp, $report_type, "families", "$model_url/families");
+	&report_urls($resp, $report_type, "families", "$model_url/families", $session);
 	$resp = $ua->get("$model_url/software?all_ids=true");
-	&report_urls($resp, $report_type, "software", "$model_url/software");
+	&report_urls($resp, $report_type, "software", "$model_url/software", $session);
 } else {
 	$resp = $ua->get("$model_url?all_ids=true");
 	&report_urls($resp, "json", $model, $model_url);
@@ -52,6 +52,19 @@ sub get_report_type {
 	my $report_type;
 	my $model = $_[0];
 	switch($model) {
+		case /resources/ {
+			print "Select report type:\n* (1) Generic JSON\n* (2) MARC\n> ";
+			$report_type = <STDIN>;
+			chomp($report_type);
+			switch($report_type) {
+				case 1 { $report_type = "json"; }
+				case 2 { $report_type = "marc"; }
+				else {
+					print "Invalid entry, try again.\n";
+					$report_type = &get_report_type($_[0]);
+				}
+			}
+		}
 		case /agents/ {
 			print "Select report type:\n* (1) Generic JSON\n* (2) EAC-CPF\n> ";
 			$report_type = <STDIN>;
@@ -76,6 +89,7 @@ sub report_urls {
 	my $report_type = $_[1];
 	my $model = $_[2];
 	my $model_url = $_[3];
+	my $session = $_[4];
 	my $json_path = $config->{json_path};
 	my $eac_path = $config->{eac_path};
 	if($response->code() eq 404) { die "Error: ".$response->status_line().": $model\n"; } else {
@@ -91,9 +105,8 @@ sub report_urls {
 				print $fh "{\"$model\":\[";
 				for my $model_id (@$model_ids) { 
 					$i++;
-					print "Writing $model_url record $i of $size...\r";
-					my $json_response = $ua->get("$model_url/$model_id");
-					my $record = $json_response->decoded_content;
+					my $record = &get_request("$model_url/$model_id", $session);
+					$record = decode_json($record);
 					print $fh $record;
 					if($i < $size) { print $fh ","; }
 				}
@@ -104,10 +117,8 @@ sub report_urls {
 				if($model eq "software") { $model = "softwares"; }
 				for my $model_id (@$model_ids) {
 					$i++;
-					#print "Writing $url record $i of $size...\r";
 					print "$url/$repo/archival_contexts/$model/$model_id.xml\n";
-					my $xml_response = $ua->get("$url/$repo/archival_contexts/$model/$model_id.xml");
-					my $record = $xml_response->decoded_content;
+					my $record = &get_request("$url/$repo/archival_contexts/$model/$model_id.xml", $session);
 					my $file_output = "$eac_path/$model"."_"."$model_id"."_eac.xml";
 					if(-e $file_output) { unlink $file_output; }
 					open my $fh, '>>', $file_output or die "Error opening $file_output: $!\n";
