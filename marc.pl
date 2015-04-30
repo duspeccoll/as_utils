@@ -29,7 +29,7 @@ for my $coll (@$colls) {
 	my $title = $json->{title};
 	print "Writing MARC for $id $title...\n";
 	my $file = &get_request("$backend/$repo/resources/marc21/$coll.xml", $session);
-	my $id = lc($id);
+	$id = lc($id);
 	my $filename = "$marc_path/$id"."_marc.xml";
 	# ArchivesSpace sometimes outputs fields even if no value is present, which causes errors.
 	# This next line deletes those fields to get around that.
