@@ -25,8 +25,11 @@ $colls = decode_json($colls);
 for my $coll (@$colls) {
 	my $json = &get_request("$backend/$repo/resources/$coll", $session);
 	$json = decode_json($json);
+	my $id = $json->{id_0};
+	my $title = $json->{title};
+	print "Writing MARC for $id $title...\n";
 	my $file = &get_request("$backend/$repo/resources/marc21/$coll.xml", $session);
-	my $id = lc($json->{id_0});
+	my $id = lc($id);
 	my $filename = "$marc_path/$id"."_marc.xml";
 	# ArchivesSpace sometimes outputs fields even if no value is present, which causes errors.
 	# This next line deletes those fields to get around that.
