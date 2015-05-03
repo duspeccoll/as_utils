@@ -128,5 +128,4 @@ sub report_urls {
 			}
 		}
 	}
-	print "\n";
 }
