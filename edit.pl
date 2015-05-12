@@ -26,12 +26,12 @@ if(-e $error_file) { unlink $error_file; }
 my $session = &login($url);
 $ua->default_header('X-ArchivesSpace-Session' => $session);
 
-my $input = "../notes_pers_ids.txt";
+my $input = "../notes_corp_ids.txt";
 open my $fh, "<", $input or die "Can't open $input: $!\n";
 open my $fout, ">>", $error_file or die "Can't open $error_file: $!\n";
 while(my $row = <$fh>) {
 	chomp($row);
-	my $req = HTTP::Request->new(GET => "$url/agents/people/$row");
+	my $req = HTTP::Request->new(GET => "$url/agents/corporate_entities/$row");
 	my $resp = $ua->request($req);
 	my $record;
 	if($resp->is_success) {
@@ -52,7 +52,7 @@ while(my $row = <$fh>) {
 		}
 		$record->{notes} = $notes;
 		my $record = encode_json($record);
-		my $post_req = HTTP::Request->new(POST => "$url/agents/people/$row");
+		my $post_req = HTTP::Request->new(POST => "$url/agents/corporate_entities/$row");
 		$post_req->header("Content-Type" => "application/json");
 		$post_req->content($record);
 		$resp = $ua->request($post_req);
@@ -73,8 +73,8 @@ while(my $row = <$fh>) {
 		}
 	} else { 
 		my $status_line = $resp->status_line;
-		print "Error: $record_uri: $status_line\n";
-		print $fout "Error: $record_uri: $status_line\n";
+		print "Error: $row: $status_line\n";
+		print $fout "Error: $row: $status_line\n";
 	}
 }
 close $fout or die "Can't close $error_file: $!\n";
