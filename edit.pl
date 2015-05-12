@@ -19,7 +19,8 @@ my $config = LoadFile('config.yml');
 my $ua = LWP::UserAgent->new;
 my $url = $config->{url};
 my $repo = $config->{repo};
-my $error_file = "/home/kevin/work/errors_".strftime("%Y%m%d_%H%M%S", localtime).".txt";
+my $timestamp = strftime("%Y%m%d_%H%M%S", localtime);
+my $error_file = "/home/kevin/work/errors_$timestamp.txt";
 if(-e $error_file) { unlink $error_file; }
 
 my $session = &login($url);
