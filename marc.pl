@@ -29,8 +29,10 @@ for my $coll (@$colls) {
 	my $title = $json->{title};
 	print "Writing MARC for $id $title...\n";
 	my $file = &get_request("$backend/$repo/resources/marc21/$coll.xml", $session);
+	print "File fetched. ";
 	$id = lc($id);
 	my $filename = "$marc_path/$id"."_marc.xml";
+	print "Preparing to write $filename...\n";
 	# ArchivesSpace sometimes outputs fields even if no value is present, which causes errors.
 	# This next line deletes those fields to get around that.
 	$file =~ s/\s+?<.+?\/>//g;
@@ -79,6 +81,8 @@ for my $coll (@$colls) {
 	}
 	if(-e $filename) { unlink $filename; }
 	my $file_out = MARC::File::XML->out($filename);
+	print "Writing... ";
 	$file_out->write($record);
+	print "Done!\n";
 }
 print "\n";
