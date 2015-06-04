@@ -17,6 +17,7 @@ my $config = LoadFile('config.yml');
 
 # initialize the user agent and config variables
 my $ua = LWP::UserAgent->new;
+$ua->timeout(60000);
 my $url = $config->{url};
 my $repo = $config->{repo};
 my $timestamp = strftime("%Y%m%d_%H%M%S", localtime);
