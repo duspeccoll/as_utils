@@ -27,9 +27,11 @@ if(-e $error_file) { unlink $error_file; }
 my $session = &login($url);
 $ua->default_header('X-ArchivesSpace-Session' => $session);
 
-&process("people");
+# just gonna do corporate names for now, people take forever
+
+#&process("people");
 &process("corporate_entities");
-&process("families");
+#&process("families");
 
 sub process {
 	my $type = $_[0];
