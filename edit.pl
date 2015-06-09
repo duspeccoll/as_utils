@@ -36,10 +36,12 @@ $ua->default_header('X-ArchivesSpace-Session' => $session);
 sub process {
 	my $type = $_[0];
 	my $input = "$type.txt";
+	my $count = 0;
 	open my $fh, "<", $input or die "Can't open $input: $!\n";
 	open my $fout, ">>", $error_file or die "Can't open $error_file: $!\n";
 	while(my $row = <$fh>) {
 		chomp($row);
+		$count++;
 		my $req = HTTP::Request->new(GET => "$url/agents/$type/$row");
 		my $resp = $ua->request($req);
 		my $record;
@@ -69,21 +71,21 @@ sub process {
 			if($resp->is_success) {
 				my $status = $response->{status};
 				my $uri = $response->{uri};
-				print "$status: $uri\n";
-				print $fout "$status: $uri\n";
+				print "$count: $status: $uri\n";
+				print $fout "$count: $status: $uri\n";
 			} else { 
 				my $error = $response->{error};
 				while ( my ($key, $values) = each %$error ) {
 					for my $value (@$values) {
-						print "Error: $record_uri: $key: $value\n";
-						print $fout "Error: $record_uri: $key: $value\n";
+						print "$count: Error: $record_uri: $key: $value\n";
+						print $fout "$count: Error: $record_uri: $key: $value\n";
 					}
 				}
 			}
 		} else { 
 			my $status_line = $resp->status_line;
-			print "Error: $row: $status_line\n";
-			print $fout "Error: $row: $status_line\n";
+			print "$count: Error: $row: $status_line\n";
+			print $fout "$count: Error: $row: $status_line\n";
 		}
 	}
 	close $fout or die "Can't close $error_file: $!\n";

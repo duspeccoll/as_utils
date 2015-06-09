@@ -1,11 +1,10 @@
 #!/usr/bin/perl
 
 # reports.pl -- getting a bunch of ASpace data at once
-#
-# Basically this just gets a list of IDs for each data model and then downloads the JSON for all of them.
-# From there I'd just run it through Open Refine or something, until I have time to do more interesting things with it.
-#
-# Once reports are functional I won't need these anymore but I don't want to wait that long to do reporting.
+
+# Basically this just gets a list of IDs for each data model and then downloads the JSON for all of them. From there I'd just run it through Open Refine or something, until I have time to do more interesting things with it.
+
+# This will become obsolete once there are batch exports of MODS, MARC, EAD, etc. from ArchivesSpace (cf. Jira ticket AR-902) but until then...
 
 use strict;
 use warnings;
