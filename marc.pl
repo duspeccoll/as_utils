@@ -1,5 +1,7 @@
 #!/usr/bin/perl
 
+# There must be an easier way to do what this script sets out to do but I haven't sat down and figured it out yet.
+
 use strict;
 use warnings;
 use LWP::UserAgent;
@@ -29,10 +31,8 @@ for my $coll (@$colls) {
 	my $title = $json->{title};
 	print "Writing MARC for $id $title...\n";
 	my $file = &get_request("$backend/$repo/resources/marc21/$coll.xml", $session);
-	print "File fetched. ";
 	$id = lc($id);
 	my $filename = "$marc_path/$id"."_marc.xml";
-	print "Preparing to write $filename...\n";
 	# ArchivesSpace sometimes outputs fields even if no value is present, which causes errors.
 	# This next line deletes those fields to get around that.
 	$file =~ s/\s+?<.+?\/>//g;
@@ -47,11 +47,25 @@ for my $coll (@$colls) {
 		$genre->replace_with($new_genre);
 	}
 
+	# Right now we use External Documents to link out to Islandora collections, catalog records, and WorldCat records for a collection.
+	# In the future I'm planning to move the catalog record numbers into the Collection Management section of the record, so the exporter
+	# will change to reflect this.
+
+	my $sierra;
+	if($json->{collection_management}->{cataloged_note}) {
+		($sierra = $json->{collection_management}->{cataloged_note}) =~ s/Catalog record number: //g;
+		if($sierra =~ m/^\./) {
+			$sierra = "*recs=b,b3=z,ov=$sierra";
+		} else { $sierra = "*recs=b,b3=z,ov=.$sierra"; }
+		my $marc_949 = MARC::Field->new('949',' ',' ','a' => $sierra);
+		$record->append_fields($marc_949);
+	}
+
 	my $extdocs = $json->{external_documents};
 	for my $extdoc (@$extdocs) {
 		switch($extdoc->{title}) {
 			case /Encore record/ { 
-				my $sierra = $extdoc->{location};
+				$sierra = $extdoc->{location};
 				if($sierra) {
 					if($sierra =~ m/^\./) {
 						$sierra = "*recs=b,b3=z,ov=$sierra";
