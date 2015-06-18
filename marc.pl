@@ -21,16 +21,16 @@ my $repo = $config->{repo};
 my $marc_path = $config->{marc_path};
 
 my $session = &login($backend);
-my $colls = &get_request("$backend/$repo/resources?all_ids=true", $session);
-$colls = decode_json($colls);
+my $resources = &get_request("$backend/$repo/resources?all_ids=true", $session);
+$resources = decode_json($resources);
 
-for my $coll (@$colls) {
-	my $json = &get_request("$backend/$repo/resources/$coll", $session);
+for my $resource (@$resources) {
+	my $json = &get_request("$backend/$repo/resources/$resource", $session);
 	$json = decode_json($json);
 	my $id = $json->{id_0};
 	my $title = $json->{title};
 	print "Writing MARC for $id $title...\n";
-	my $file = &get_request("$backend/$repo/resources/marc21/$coll.xml", $session);
+	my $file = &get_request("$backend/$repo/resources/marc21/$resource.xml", $session);
 	$id = lc($id);
 	my $filename = "$marc_path/$id"."_marc.xml";
 	# ArchivesSpace sometimes outputs fields even if no value is present, which causes errors.
@@ -95,8 +95,6 @@ for my $coll (@$colls) {
 	}
 	if(-e $filename) { unlink $filename; }
 	my $file_out = MARC::File::XML->out($filename);
-	print "Writing... ";
 	$file_out->write($record);
-	print "Done!\n";
 }
 print "\n";
