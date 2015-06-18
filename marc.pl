@@ -28,8 +28,7 @@ for my $resource (@$resources) {
 	my $json = &get_request("$backend/$repo/resources/$resource", $session);
 	$json = decode_json($json);
 	my $id = $json->{id_0};
-	my $title = $json->{title};
-	print "Writing MARC for $id $title...\n";
+	print "Writing MARC for $id $json->{title}... ";
 	my $file = &get_request("$backend/$repo/resources/marc21/$resource.xml", $session);
 	$id = lc($id);
 	my $filename = "$marc_path/$id"."_marc.xml";
@@ -96,5 +95,6 @@ for my $resource (@$resources) {
 	if(-e $filename) { unlink $filename; }
 	my $file_out = MARC::File::XML->out($filename);
 	$file_out->write($record);
+	print "done.\n";
 }
 print "\n";
