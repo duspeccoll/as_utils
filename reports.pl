@@ -1,11 +1,10 @@
 #!/usr/bin/perl
 
 # reports.pl -- getting a bunch of ASpace data at once
-#
-# Basically this just gets a list of IDs for each data model and then downloads the JSON for all of them.
-# From there I'd just run it through Open Refine or something, until I have time to do more interesting things with it.
-#
-# Once reports are functional I won't need these anymore but I don't want to wait that long to do reporting.
+
+# Basically this just gets a list of IDs for each data model and then downloads the JSON for all of them. From there I'd just run it through Open Refine or something, until I have time to do more interesting things with it.
+
+# This will become obsolete once there are batch exports of MODS, MARC, EAD, etc. from ArchivesSpace (cf. Jira ticket AR-902) but until then...
 
 use strict;
 use warnings;
@@ -36,14 +35,18 @@ if($model eq "agents" or $model eq "subjects") {
 my $ids;
 if($model eq "agents") {
 	my $report_type = &get_report_type($model);
+	switch($report_type) {
+		case /json/ { $model_url = "$url/$model"; }
+		case /eac/ { $model_url = "$url/$repo/$model"; }
+	}
 	# we need to do all four types of agents separately
-	$ids = $ua->get("$model_url/people?all_ids=true");
+	$ids = $ua->get("$url/$model/people?all_ids=true");
 	&report_urls($session, $ids, $report_type, "$model/people", "$model_url/people");
-	$ids = $ua->get("$model_url/corporate_entities?all_ids=true");
+	$ids = $ua->get("$url/$model/corporate_entities?all_ids=true");
 	&report_urls($session, $ids, $report_type, "$model/corporate_entities", "$model_url/corporate_entities");
-	$ids = $ua->get("$model_url/families?all_ids=true");
+	$ids = $ua->get("$url/$model/families?all_ids=true");
 	&report_urls($session, $ids, $report_type, "$model/families", "$model_url/families");
-	$ids = $ua->get("$model_url/software?all_ids=true");
+	$ids = $ua->get("$url/$model/software?all_ids=true");
 	&report_urls($session, $ids, $report_type, "$model/software", "$model_url/software");
 } elsif($model eq "resources") {
 	my $report_type = &get_report_type($model);
@@ -96,7 +99,8 @@ sub report_urls {
 	my $response = $_[1];
 	my $report_type = $_[2];
 	my $model = $_[3];
-	my $model_url = $_[4];
+	my $model_url;
+	if($_[4]) { $model_url = $_[4]; }
 	my $json_path = $config->{json_path};
 	my $eac_path = $config->{eac_path};
 	if($response->code() eq 404) { die "Error: ".$response->status_line().": $model\n"; } else {
@@ -121,17 +125,20 @@ sub report_urls {
 				close $fh or die "Error closing $file_output: $!\n";
 			}
 			case /eac/ {
-				if($model eq "software") { $model = "softwares"; }
 				$model =~ s/agents\///g;
+				$model =~ s/software/softwares/;
 				for my $id (@$ids) {
 					$i++;
-					print "$url/$repo/archival_contexts/$model/$id.xml\n";
-					my $record = &get_request("$url/$repo/archival_contexts/$model/$id.xml", $session);
-					my $file_output = "$eac_path/$model"."_"."$id"."_eac.xml";
-					if(-e $file_output) { unlink $file_output; }
-					open my $fh, '>>', $file_output or die "Error opening $file_output: $!\n";
-					print $fh $record;
-					close $fh or die "Error closing $file_output: $!\n";
+					$model_url = "$url/$repo/archival_contexts/$model/$id.xml";
+					if($model_url !~ m/1506/) {
+						print "$model_url\n";
+						my $record = &get_request($model_url, $session);
+						my $file_output = "$eac_path/$model"."_"."$id"."_eac.xml";
+						if(-e $file_output) { unlink $file_output; }
+						open my $fh, '>>', $file_output or die "Error opening $file_output: $!\n";
+						print $fh $record;
+						close $fh or die "Error closing $file_output: $!\n";
+					}
 				}
 			}
 		}
