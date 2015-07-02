@@ -51,7 +51,7 @@ if($model eq "agents") {
 } elsif($model eq "resources") {
 	my $report_type = &get_report_type($model);
 	$ids = $ua->get("$model_url?all_ids=true");
-	&report_urls($session, $ids, $report_type, $model, $model_url);
+	&report_urls($session, $ids, $report_type, $model);
 } else {
 	$ids = $ua->get("$model_url?all_ids=true");
 	&report_urls($session, $ids, "json", $model, $model_url);
@@ -99,10 +99,14 @@ sub report_urls {
 	my $response = $_[1];
 	my $report_type = $_[2];
 	my $model = $_[3];
+	
 	my $model_url;
 	if($_[4]) { $model_url = $_[4]; }
+	
 	my $json_path = $config->{json_path};
 	my $eac_path = $config->{eac_path};
+	my $ead_path = $config->{ead_path};
+	
 	if($response->code() eq 404) { die "Error: ".$response->status_line().": $model\n"; } else {
 		my $ids = decode_json($response->decoded_content);
 		my $size = @$ids;
@@ -128,7 +132,6 @@ sub report_urls {
 				$model =~ s/agents\///g;
 				$model =~ s/software/softwares/;
 				for my $id (@$ids) {
-					$i++;
 					$model_url = "$url/$repo/archival_contexts/$model/$id.xml";
 					if($model_url !~ m/1506/) {
 						print "$model_url\n";
@@ -139,6 +142,23 @@ sub report_urls {
 						print $fh $record;
 						close $fh or die "Error closing $file_output: $!\n";
 					}
+				}
+			}
+			case /ead/ {
+				for my $id (@$ids) {
+					$model_url = "$url/$repo/resource_descriptions/$id.xml";
+					my $resource = &get_request("$url/$repo/$model/$id", $session);
+					$resource = decode_json($resource);
+					my $resource_id = lc($resource->{id_0});
+					my $title = $resource->{title};
+					print "Getting finding aid for $resource_id $title... \n";
+					my $record = &get_request($model_url, $session);
+					my $file_output = "$ead_path/$resource_id.xml";
+					print "Writing $file_output... \n";
+					if(-e $file_output) { unlink $file_output; }
+					open my $fh, '>>', $file_output or die "Error opening $file_output: $!\n";
+					print $fh $record;
+					close $fh or die "Error closing $file_output: $!\n";
 				}
 			}
 		}
