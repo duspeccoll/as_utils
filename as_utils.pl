@@ -182,10 +182,8 @@ sub get_request {
 	if($resp->is_success) {
 		$return = $resp->decoded_content;
 	} else { 
-		print Dumper $resp;
-		print "Error: $sl: $url. Retrying... \n";
-		sleep 5;
-		$return = &get_request($url, $session);
+		print "Error: $sl: $url\n";
+		$return = '';
 	}
 	
 	$return;

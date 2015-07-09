@@ -106,7 +106,8 @@ sub report_urls {
 	my $json_path = $config->{json_path};
 	my $eac_path = $config->{eac_path};
 	my $ead_path = $config->{ead_path};
-	
+	my $marc_path = $config->{marc_path};
+
 	if($response->code() eq 404) { die "Error: ".$response->status_line().": $model\n"; } else {
 		my $ids = decode_json($response->decoded_content);
 		my $size = @$ids;
@@ -144,6 +145,25 @@ sub report_urls {
 					}
 				}
 			}
+			case /marc/ {
+				for my $id (@$ids) {
+					$model_url = "$url/$repo/$model/marc21/$id.xml";
+					my $resource = &get_request("$url/$repo/$model/$id", $session);
+					$resource = decode_json($resource);
+					my $resource_id = lc($resource->{id_0});
+					my $title = $resource->{title};
+					print "Getting MARC record for $resource_id $title... \n";
+					my $record = &get_request($model_url, $session);
+					if($record) {
+						my $file_output = "$marc_path/$resource_id"."_marc.xml";
+						print "Writing $file_output... \n";
+						if(-e $file_output) { unlink $file_output; }
+						open my $fh, '>>', $file_output or die "Error opening $file_output: $!\n";
+						print $fh $record;
+						close $fh or die "Error closing $file_output: $!\n";
+					}
+				}
+			}
 			case /ead/ {
 				for my $id (@$ids) {
 					$model_url = "$url/$repo/resource_descriptions/$id.xml";
@@ -153,7 +173,7 @@ sub report_urls {
 					my $title = $resource->{title};
 					print "Getting finding aid for $resource_id $title... \n";
 					my $record = &get_request($model_url, $session);
-					my $file_output = "$ead_path/$resource_id.xml";
+					my $file_output = "$ead_path/$resource_id"."_ead.xml";
 					print "Writing $file_output... \n";
 					if(-e $file_output) { unlink $file_output; }
 					open my $fh, '>>', $file_output or die "Error opening $file_output: $!\n";
