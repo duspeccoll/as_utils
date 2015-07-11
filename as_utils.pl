@@ -51,72 +51,67 @@ sub get_file {
 	}
 }
 
-# login(url)
-# Handles logging into the ArchivesSpace backend.
+# new_session(url)
+# Gets a new session, if a user has not previously logged in.
+# Runs when the script starts.
 #
 # Params:
 # * url -- the URL to the ArchivesSpace backend.
-# * count -- a variable that checks how many login attempts have been made.
-#     (login() stops trying after five attempts)
+# * count -- a variable that checks how many login attempts have been made. Stops trying after five attempts.
 
-sub login {
-	my $url;
-	my $count;
-	my $session;
+sub new_session {
+	my($url, $i, $s, $l, $p);
 
 	if($_[0]) { $url = $_[0]; } else {
 		print "URL: ";
-		$url = <STDIN>;
-		chomp($url);
+		chomp($url = <STDIN>);
 	}
-	if($_[1]) { $count = $_[1]; } else { $count = 0; }
+	if($_[1]) { $i = $_[1]; } else { $i = 0; }
 	print "Logging into $url... \n";
 	print "login: ";
-	my $login = <STDIN>;
-	chomp($login);
+	chomp($l = <STDIN>);
 	print "password: ";
 	ReadMode 2;
-	my $password = <STDIN>;
-	chomp($password);
+	chomp($p = <STDIN>);
 	ReadMode 0;
 	print "\n";
 
-	my $resp = $ua->post("$url/users/$login/login?password=$password");
+	my $resp = $ua->post("$url/users/$l/login?password=$p");
 	if($resp->is_success) {
 		my $response = decode_json($resp->decoded_content);
-		$session = $response->{session};
+		$s = $response->{session};
 	} else {
-		$count++;
-		if($count == 5) { 
+		$i++;
+		if($i == 5) { 
 			die "Login aborted after five attempts\n";
 		} else {
 			print "Login failed.\n";
-			$session = &login($url, $count);
+			$s = &new_session($url, $i);
 		}
 	}
 
-	return($login, $password, $session);
+	return($s, $l, $p);
 }
 
-# new_session
-# Gets a new session ID if the last one expired and the login credentials are known.
+# refresh_session
+# Gets a new session, using previously provided login credentials.
 #
 # Parameters:
 # * url - the URL to the ArchivesSpace backend
 # * login - username
 # * password - password
 
-sub new_session {
-	my $session;
+sub refresh_session {
+	my $s;
 	my $resp = $ua->post("$_[0]/users/$_[1]/login?password=$_[2]");
 	if($resp->is_success) {
 		my $response = decode_json($resp->decoded_content);
-		$session = $response->{session};
+		$s = $response->{session};
 	} else {
 		die "An error occurred.\n";
 	}
 
-	$session;
+	$s;
 }
 
 # select_data_model
@@ -180,6 +175,9 @@ sub get_request {
 	my $resp = $ua->get($url, 'X-ArchivesSpace-Session' => $session);
 	my $sl = $resp->status_line();
 	if($resp->is_success) {
+		# Set this aside for refreshing sessions
+		my $ct = $resp->header('Content-Type');
+
 		$return = $resp->decoded_content;
 	} else { 
 		print "Error: $sl: $url\n";
