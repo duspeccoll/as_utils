@@ -14,15 +14,6 @@ use Data::Dumper;
 my $ua = LWP::UserAgent->new;
 $ua->timeout(10000);
 
-# Utilities contained in this file, in order:
-#
-# 1. get_file
-# 2. login
-# 3. select_data_model
-# 4. get_agent_class
-# 5. get_request
-
-
 # get_file()
 # Gets a file from user input.
 
@@ -177,7 +168,6 @@ sub get_request {
   if($resp->is_success) {
     # Set this aside for refreshing sessions
     my $ct = $resp->header('Content-Type');
-
     $return = $resp->decoded_content;
   } else { 
     print "Error: $sl: $url\n";
