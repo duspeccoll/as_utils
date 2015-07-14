@@ -212,19 +212,25 @@ sub execute_report {
             id => $resource->{id_0},
             title => $resource->{title},
             ead_loc => $resource->{ead_location}
-          };		    
+          };
         }
         my @sorted_keys = sort { $a->{id} cmp $b->{id} } @keys;
-		@keys = @sorted_keys;
-		my $file_output = "/home/kevin/collection_list.html";
+        @keys = @sorted_keys;
+        my $file_output = "/home/kevin/collection_list.html";
         if(-e $file_output) { unlink $file_output; }
         for my $key (@keys) {
+          open my $fh, '>>', $file_output or die "Error opening $file_output: $!\n";
           my $row;
+          switch($key->{id}) {
+            case /B002/ { print $fh "<h3><a id=\"beck\"/>Beck Archives</h3>\n"; }
+            case /D001/ { print $fh "<h3><a id=\"dance\"/>Carson Brierly Giffen Dance Library</h3>\n"; }
+            case /M001/ { print $fh "<h3><a id=\"mss\"/>Manuscripts</h3>\n"; }
+            case /U001/ { print $fh "<h3><a id=\"univ\"/>University Archives</h3>\n"; }
+          }
           if($key->{ead_loc}) { $row .= "<a href=\"".$key->{ead_loc}."\">";}
           $row .= "(".$key->{id}.") ".$key->{title};
           if($key->{ead_loc}) { $row .= "</a>"; }
-          $row .= "\n";
-          open my $fh, '>>', $file_output or die "Error opening $file_output: $!\n";
+          $row .= "<br/>\n";
           print $fh $row;
           close $fh or die "Error closing $file_output: $!\n";
         }
