@@ -11,8 +11,6 @@ use YAML::XS 'LoadFile';
 use open ':std', ':encoding(UTF-8)';
 binmode(STDOUT, ":utf8");
 
-use Data::Dumper;
-
 require 'as_utils.pl';
 
 # Initialize the user agent
@@ -100,7 +98,6 @@ sub execute_report {
   my $report = $_[0];
   my $model = $_[1];
   my($s, $l, $p);
-  #my $session = "da40aefff8554d12a18ac3174e8d4cdb398b7688da2111d0d3ed20211b376e6c";
 
   if($_[2]) { $s = $_[2]; } else {
     ($s, $l, $p) = &new_session($url);
