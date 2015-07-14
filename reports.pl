@@ -64,19 +64,20 @@ sub select_report {
       }
     }
     case /resources/ {
-      print "Select report type:\n* (1) Generic JSON\n* (2) EAD\n* (3) MARC\n> ";
+      print "Select report type:\n* (1) Generic JSON\n* (2) EAD\n* (3) MARC\n* (4) HTML list\n> ";
       chomp($report_type = <STDIN>);
       switch($report_type) {
         case 1 { $report_type = "json"; }
         case 2 { $report_type = "ead"; }
         case 3 { $report_type = "marc"; }
+        case 4 { $report_type = "html"; }
         else {
           print "Invalid entry, try again.\n";
           $report_type = &select_report($_[0]);
         }
       }
     }
-    # The other reports will go here, but I haven't written them yet 
+    # The other reports will go here, but I haven't written them yet
     else {
       print "Select report type:\n* (1) Generic JSON\n> ";
       chomp($report_type = <STDIN>);
@@ -107,15 +108,15 @@ sub execute_report {
 
   my $ids;
   switch($model) {
-    case /subjects/ { 
+    case /subjects/ {
       print "Grab $url/$model IDs... \n";
       $ids = $ua->get("$url/$model?all_ids=true");
     }
-    case /^agents/ { 
+    case /^agents/ {
       print "Grab $url/$model IDs... \n";
-      $ids = $ua->get("$url/$model?all_ids=true"); 
+      $ids = $ua->get("$url/$model?all_ids=true");
     }
-    else { 
+    else {
       print "Grab $url/$repo/$model IDs... \n";
       $ids = $ua->get("$url/$repo/$model?all_ids=true");
     }
@@ -155,7 +156,7 @@ sub execute_report {
           my $model_url = "$url/$repo/archival_contexts/$model/$id.xml";
           my $file_output = "$eac_path/$model"."_"."$id"."_eac.xml";
           # this is because the DU EAC record takes too long to export
-          if($model_url !~ m/1506/) {
+          if($model_url !~ m/corporate_entities\/1506/) {
             print "$model_url\n";
             my $record = &get_request($model_url, $s);
             if(-e $file_output) { unlink $file_output; }
@@ -201,6 +202,32 @@ sub execute_report {
             print $fh $ead;
             close $fh or die "Error closing $file_output: $!\n";
           }
+        }
+      }
+      case /html/ {
+        my @keys;
+        for my $id (@$ids) {
+          my $resource = &get_request("$url/$repo/$model/$id", $s);
+          $resource = decode_json($resource);
+          my $record = {
+            'id' => $resource->{id_0},
+            'title' => $resource->{title},
+            'ead_loc' => $resource->{ead_location}
+          };
+          push @keys, %$record;
+        }
+        @keys = sort { $a->{id} cmp $b->{id} } @keys;
+        my $file_output = "/home/kevin/collection_list.html";
+        if(-e $file_output) { unlink $file_output; }
+        for my $key (@keys) {
+          my $row;
+          if($key->{'ead_loc'}) { $row .= "<a href=\"".$key->{'ead_loc'}."\">";}
+          $row .= "(".$key->{'id'}.") ".$key->{'title'};
+          if($key->{'ead_loc'}) { $row .= "</a>"; }
+          $row .= "\n";
+          open my $fh, '>>', $file_output or die "Error opening $file_output: $!\n";
+          print $fh $row;
+          close $fh or die "Error closing $file_output: $!\n";
         }
       }
     }
