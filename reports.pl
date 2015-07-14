@@ -155,7 +155,7 @@ sub execute_report {
           my $model_url = "$url/$repo/archival_contexts/$model/$id.xml";
           my $file_output = "$eac_path/$model"."_"."$id"."_eac.xml";
           # this is because the DU EAC record takes too long to export
-          if($model_url !~ m/1506/) {
+          if($model_url !~ m/corporate_entities\/1506/) {
             print "$model_url\n";
             my $record = &get_request($model_url, $s);
             if(-e $file_output) { unlink $file_output; }
