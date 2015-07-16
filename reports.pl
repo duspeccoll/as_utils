@@ -36,18 +36,21 @@ my $model = &select_data_model();
 # Select the report to run based on the data model
 my $report = &select_report($model);
 
+# declare and assign ID and authentication variables
 my $ids;
+my($s, $l, $p) = &new_session($url);
 
-# Choose the type of report to run, based on the data model
+# Execute the reports. Agent reports are run in four parts, one for each type
 if($model eq "agents") {
-  &execute_report($report, "$model/people");
-  &execute_report($report, "$model/corporate_entities");
-  &execute_report($report, "$model/families");
-  &execute_report($report, "$model/software");
+  &execute_report($report, "$model/people", $s, $l, $p);
+  &execute_report($report, "$model/corporate_entities", $s, $l, $p);
+  &execute_report($report, "$model/families", $s, $l, $p);
+  &execute_report($report, "$model/software", $s, $l, $p);
 } else {
-  &execute_report($report, $model);
+  &execute_report($report, $model, $s, $l, $p);
 }
 
+# Subroutine to select the type of report to run (JSON, EAD, MARC, etc.)
 sub select_report {
   my $report_type;
   switch($_[0]) {
@@ -77,7 +80,7 @@ sub select_report {
         }
       }
     }
-    # The other reports will go here, but I haven't written them yet
+    # Anything other than agents or resources just runs generic JSON for now.
     else {
       print "Select report type:\n* (1) Generic JSON\n> ";
       chomp($report_type = <STDIN>);
@@ -94,14 +97,12 @@ sub select_report {
   return $report_type;
 }
 
+# Subroutine to execute the reports.
+# Sometimes these fail because the session expires; I need to fix that yet
 sub execute_report {
   my $report = $_[0];
   my $model = $_[1];
-  my($s, $l, $p);
-
-  if($_[2]) { $s = $_[2]; } else {
-    ($s, $l, $p) = &new_session($url);
-  }
+  my($s, $l, $p) = ($_[2], $_[3], $_[4]);
 
   $ua->default_header('X-ArchivesSpace-Session' => $s);
 
