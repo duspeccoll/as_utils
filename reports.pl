@@ -26,10 +26,6 @@ my $eac_path = $config->{eac_path};
 my $ead_path = $config->{ead_path};
 my $marc_path = $config->{marc_path};
 
-# Initialize ArchivesSpace session (may make more sense to do this in a subroutine)
-#my $session = &new_session($url);
-#$ua->default_header('X-ArchivesSpace-Session' => $session);
-
 # Choose the data model to work with
 my $model = &select_data_model();
 
@@ -212,7 +208,8 @@ sub execute_report {
           push @keys, {
             id => $resource->{id_0},
             title => $resource->{title},
-            ead_loc => $resource->{ead_location}
+            ead_loc => $resource->{ead_location},
+            uri => $resource->{uri}
           };
         }
         my @sorted_keys = sort { $a->{id} cmp $b->{id} } @keys;
@@ -229,9 +226,9 @@ sub execute_report {
             case /U001/ { print $fh "<h3><a id=\"univ\"/>University Archives</h3>\n"; }
           }
           if($key->{ead_loc}) { $row .= "<a href=\"".$key->{ead_loc}."\">";}
+          else { $row .= "<a href=\"http://duarchives.coalliance.org".$key->{uri}."\">"; }
           $row .= "(".$key->{id}.") ".$key->{title};
-          if($key->{ead_loc}) { $row .= "</a>"; }
-          $row .= "<br/>\n";
+          $row .= "</a><br/>\n";
           print $fh $row;
           close $fh or die "Error closing $file_output: $!\n";
         }
