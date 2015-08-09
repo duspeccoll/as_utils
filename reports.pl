@@ -20,15 +20,7 @@ my $ua = LWP::UserAgent->new;
 my $config = LoadFile('config.yml');
 my $url = $config->{url};
 my $repo = $config->{repo};
-
-my $json_path = $config->{json_path};
-my $eac_path = $config->{eac_path};
-my $ead_path = $config->{ead_path};
-my $marc_path = $config->{marc_path};
-
-# Initialize ArchivesSpace session (may make more sense to do this in a subroutine)
-#my $session = &new_session($url);
-#$ua->default_header('X-ArchivesSpace-Session' => $session);
+my $file_path = $config->{file_path};
 
 # Choose the data model to work with
 my $model = &select_data_model();
@@ -74,6 +66,18 @@ sub select_report {
         case 2 { $report_type = "ead"; }
         case 3 { $report_type = "marc"; }
         case 4 { $report_type = "html"; }
+        else {
+          print "Invalid entry, try again.\n";
+          $report_type = &select_report($_[0]);
+        }
+      }
+    }
+    case /digital_objects/ {
+      print "Select report type:\n* (1) Generic JSON\n* (2) MODS\n> ";
+      chomp($report_type = <STDIN>);
+      switch($report_type) {
+        case 1 { $report_type = "json"; }
+        case 2 { $report_type = "mods"; }
         else {
           print "Invalid entry, try again.\n";
           $report_type = &select_report($_[0]);
@@ -135,7 +139,7 @@ sub execute_report {
           else { $model_url = "$url/$repo/$model"; }
         }
         $model =~ s/agents\///g;
-        my $file_output = "$json_path/$model"."_report.json";
+        my $file_output = "$file_path/json/$model"."_report.json";
         if(-e $file_output) { unlink $file_output; }
         print "Writing report to $file_output... \n";
         open my $fh, '>>', $file_output or die "Error opening $file_output: $!\n";
@@ -154,7 +158,7 @@ sub execute_report {
         $model =~ s/software/softwares/;
         for my $id (@$ids) {
           my $model_url = "$url/$repo/archival_contexts/$model/$id.xml";
-          my $file_output = "$eac_path/$model"."_"."$id"."_eac.xml";
+          my $file_output = "$file_path/eac/$model"."_"."$id"."_eac.xml";
           # this is because the DU EAC record takes too long to export
           if($model_url !~ m/corporate_entities\/1506/) {
             print "$model_url\n";
@@ -176,7 +180,21 @@ sub execute_report {
           print "Downloading MARC record for $num $title... \n";
           my $record = &get_request($model_url, $s);
           if($record) {
-            my $file_output = "$marc_path/$num"."_marc.xml";
+            my $file_output = "$file_path/marc/$num"."_marc.xml";
+            print "Writing $file_output... \n";
+            if(-e $file_output) { unlink $file_output; }
+            open my $fh, '>>', $file_output or die "Error opening $file_output: $!\n";
+            print $fh $record;
+            close $fh or die "Error closing $file_output: $!\n";
+          }
+        }
+      }
+      case /mods/ {
+        for my $id (@$ids) {
+          my $model_url = "$url/$repo/$model/mods/$id.xml";
+          my $record = &get_request($model_url, $s);
+          if($record) {
+            my $file_output = "$file_path/mods/$id"."_mods.xml";
             print "Writing $file_output... \n";
             if(-e $file_output) { unlink $file_output; }
             open my $fh, '>>', $file_output or die "Error opening $file_output: $!\n";
@@ -195,7 +213,7 @@ sub execute_report {
           print "Downloading EAD for $num $title... \n";
           my $ead = &get_request($model_url, $s);
           if($ead) {
-            my $file_output = "$ead_path/$num"."_ead.xml";
+            my $file_output = "$file_path/ead/$num"."_ead.xml";
             print "Writing $file_output... \n";
             if(-e $file_output) { unlink $file_output; }
             open my $fh, '>>', $file_output or die "Error opening $file_output: $!\n";
@@ -212,12 +230,13 @@ sub execute_report {
           push @keys, {
             id => $resource->{id_0},
             title => $resource->{title},
-            ead_loc => $resource->{ead_location}
+            ead_loc => $resource->{ead_location},
+            uri => $resource->{uri}
           };
         }
         my @sorted_keys = sort { $a->{id} cmp $b->{id} } @keys;
         @keys = @sorted_keys;
-        my $file_output = "/home/kevin/collection_list.html";
+        my $file_output = "$file_path/collection_list.html";
         if(-e $file_output) { unlink $file_output; }
         for my $key (@keys) {
           open my $fh, '>>', $file_output or die "Error opening $file_output: $!\n";
@@ -229,9 +248,9 @@ sub execute_report {
             case /U001/ { print $fh "<h3><a id=\"univ\"/>University Archives</h3>\n"; }
           }
           if($key->{ead_loc}) { $row .= "<a href=\"".$key->{ead_loc}."\">";}
+          else { $row .= "<a href=\"http://duarchives.coalliance.org".$key->{uri}."\">"; }
           $row .= "(".$key->{id}.") ".$key->{title};
-          if($key->{ead_loc}) { $row .= "</a>"; }
-          $row .= "<br/>\n";
+          $row .= "</a><br/>\n";
           print $fh $row;
           close $fh or die "Error closing $file_output: $!\n";
         }
