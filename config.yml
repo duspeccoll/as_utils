@@ -1,5 +1,4 @@
 ---
 url: "http://localhost:8089"
 repo: "repositories/2"
-error_file: "/home/kevin/work/errors.txt"
-file_path: "/home/kevin/work"
+file_path: "/home/kevin"
