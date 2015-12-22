@@ -26,11 +26,10 @@ def run_report(type, data_model, params)
     ids = Net::HTTP.get_response(uri)
   else
     uri = URI("#{params['url']}/#{config['repo']}/#{data_model}?all_ids=true")
-    ids = get_record(uri, uri, params)
-    #req = Net::HTTP::Get.new(uri)
-    #req['X-ArchivesSpace-Session'] = params['token']
-    #http = Net::HTTP.new(uri.hostname, uri.port)
-    #ids = http.request(req)
+    req = Net::HTTP::Get.new(uri)
+    req['X-ArchivesSpace-Session'] = params['token']
+    http = Net::HTTP.new(uri.host, uri.port)
+    ids = http.request(req)
   end
 
   if ids.code == "404"
@@ -95,7 +94,7 @@ def run_report(type, data_model, params)
     when "ead"
       url = "#{params['url']}/#{config['repo']}/resource_descriptions"
       ids.each_with_index do |id, i|
-        print "WRiting #{type} record #{i+1} of #{ids.length}... \r"
+        print "Writing #{type} record #{i+1} of #{ids.length}... \r"
         file_output = "#{config['file_path']}/ead/#{id}_ead.xml"
         File.delete(file_output) if File.exist?(file_output)
         resp = get_record(uri, URI("#{url}/#{id}.xml"), params)
