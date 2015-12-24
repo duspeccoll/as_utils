@@ -8,7 +8,7 @@ def get_record(uri, get_uri, params)
   req = Net::HTTP::Get.new(get_uri)
   req['X-ArchivesSpace-Session'] = params['token']
   resp = Net::HTTP.start(uri.host, uri.port) { |http| http.request(req) }
-  error_code = JSON.parse(resp.body)['code']
+  error_code = JSON.parse(resp.body)['code'] rescue nil
   if error_code == "SESSION_EXPIRED" or error_code == "SESSION_GONE"
     puts "\nSession expired. Fetching new token... "
     params['token'] = get_token(params)
