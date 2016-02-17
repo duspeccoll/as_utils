@@ -31,7 +31,7 @@ end
 def get_file
   print "name of file: "
   filename = gets.chomp
-  unless File.exist?(file)
+  unless File.exist?(filename)
     print "File does not exist."
     filename = get_file
   end
@@ -59,18 +59,21 @@ File.open(filename).each do |id|
   record = JSON.parse(resp.body)
 
   # code below this comment parses the JSON and does whatever work you need to do on it
+  record['instances'].each do |instance|
+    puts instance['barcode_1']
+  end
 
   # post the new JSON back through the backend
-  req = Net::HTTP::Post.new(object)
-  req['X-ArchivesSpace-Session'] = params['token']
-  req['Content-Type'] = "application/json"
-  req.body = record.to_json
-  resp = Net::HTTP.start(uri.host, uri.port) { |http| http.request(req) }
+  #req = Net::HTTP::Post.new(object)
+  #req['X-ArchivesSpace-Session'] = params['token']
+  #req['Content-Type'] = "application/json"
+  #req.body = record.to_json
+  #resp = Net::HTTP.start(uri.host, uri.port) { |http| http.request(req) }
 
   # puts whether the process succeeded or not
-  if resp.code == "200"
-    puts "Success: archival_objects/#{id.chomp.to_s}"
-  else
-    puts "Error: archival_objects/#{id.chomp.to_s}"
-  end
+  #if resp.code == "200"
+  #  puts "Success: archival_objects/#{id.chomp.to_s}"
+  #else
+  #  puts "Error: archival_objects/#{id.chomp.to_s}"
+  #end
 end
