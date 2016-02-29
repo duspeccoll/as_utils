@@ -28,49 +28,65 @@ def aspace_login
   return login, password
 end
 
-def get_file
-  print "name of file: "
-  filename = gets.chomp
-  unless File.exist?(filename)
-    print "File does not exist."
-    filename = get_file
-  end
-  return filename
-end
-
 params = {}
 
 params['url'] = "http://localhost:8089" # change this to whatever your AS backend URL is
 (params['login'], params['password']) = aspace_login
 params['token'] = get_token(params)
+uri = URI("#{params['url']}")
 
-# the file should be a list of IDs associated with the ArchivesSpace data model that we can download and work with
-filename = get_file
+req = Net::HTTP::Get.new(URI("#{params['url']}/repositories/2/resources"))
+req.set_form_data('all_ids' => true)
+req['X-ArchivesSpace-Session'] = params['token']
+resp = Net::HTTP.start(uri.host, uri.port) { |http| http.request(req) }
+resources = JSON.parse(resp.body)
 
-File.open(filename).each do |id|
-  # get the backend URI and the link to the item
-  uri = URI("#{params['url']}")
-  object = URI("#{params['url']}/repositories/2/archival_objects/#{id.chomp.to_s}")
+resources.each do |resource|
+  flag = 0 # this changes to 1 when a change is made, so we don't post every resource
 
-  # download the archival object from the backend
-  req = Net::HTTP::Get.new(object)
+  obj = URI("#{params['url']}/repositories/2/resources/#{resource.to_s}")
+  req = Net::HTTP::Get.new(obj)
   req['X-ArchivesSpace-Session'] = params['token']
   resp = Net::HTTP.start(uri.host, uri.port) { |http| http.request(req) }
   record = JSON.parse(resp.body)
 
-  # code below this comment parses the JSON and does whatever work you need to do on it
+  record['notes'].each_with_index do |note, x|
+    case note['jsonmodel_type']
+    when "note_singlepart"
+      note['content'].each_with_index do |content, i|
+        if content.include?("’")
+          content = content.gsub(/’/, '\'')
+          flag = 1
+          note['content'][i] = content
+        end
+      end
+    when "note_multipart"
+      note['subnotes'].each_with_index do |subnote, i|
+        if subnote.has_key?("content")
+          if subnote['content'].include?("’")
+            subnote['content'] = subnote['content'].gsub('’', '\'')
+            flag = 1
+            note['subnotes'][i]['content'] = subnote['content']
+          end
+        end
+      end
+    end
+    record['notes'][x] = note
+  end
 
-  # post the new JSON back through the backend
-  req = Net::HTTP::Post.new(object)
-  req['X-ArchivesSpace-Session'] = params['token']
-  req['Content-Type'] = "application/json"
-  req.body = record.to_json
-  resp = Net::HTTP.start(uri.host, uri.port) { |http| http.request(req) }
+  if flag == 1
+    # post the edited JSON back through the backend
+    req = Net::HTTP::Post.new(obj)
+    req['X-ArchivesSpace-Session'] = params['token']
+    req['Content-Type'] = "application/json"
+    req.body = record.to_json
+    resp = Net::HTTP.start(uri.host, uri.port) { |http| http.request(req) }
 
-  # puts whether the process succeeded or not
-  if resp.code == "200"
-    puts "Success: archival_objects/#{id.chomp.to_s}"
-  else
-    puts "Error: archival_objects/#{id.chomp.to_s}"
+    # puts whether the process succeeded or not
+    if resp.code == "200"
+      puts "Success: resources/#{resource.to_s}"
+    else
+      puts "Error: resources/#{resource.to_s}"
+    end
   end
 end
