@@ -1,6 +1,9 @@
 # We wrote a replace script because we needed to make a bunch of post-migration
 # edits that aren't possible through the Batch Find/Replace Beta right now.
 
+# This one is set up to remove trailing periods from genre/form headings, a
+# relic of our last collection management system.
+
 require 'io/console'
 require 'json'
 require 'net/http'
@@ -35,43 +38,27 @@ params['url'] = "http://localhost:8089" # change this to whatever your AS backen
 params['token'] = get_token(params)
 uri = URI("#{params['url']}")
 
-req = Net::HTTP::Get.new(URI("#{params['url']}/repositories/2/resources"))
+req = Net::HTTP::Get.new(URI("#{params['url']}/subjects"))
 req.set_form_data('all_ids' => true)
 req['X-ArchivesSpace-Session'] = params['token']
 resp = Net::HTTP.start(uri.host, uri.port) { |http| http.request(req) }
-resources = JSON.parse(resp.body)
+ids = JSON.parse(resp.body)
 
-resources.each do |resource|
+ids.each do |id|
   flag = 0 # this changes to 1 when a change is made, so we don't post every resource
 
-  obj = URI("#{params['url']}/repositories/2/resources/#{resource.to_s}")
+  obj = URI("#{params['url']}/subjects/#{id.to_s}")
   req = Net::HTTP::Get.new(obj)
   req['X-ArchivesSpace-Session'] = params['token']
   resp = Net::HTTP.start(uri.host, uri.port) { |http| http.request(req) }
   record = JSON.parse(resp.body)
 
-  record['notes'].each_with_index do |note, x|
-    case note['jsonmodel_type']
-    when "note_singlepart"
-      note['content'].each_with_index do |content, i|
-        if content.include?("’")
-          content = content.gsub(/’/, '\'')
-          flag = 1
-          note['content'][i] = content
-        end
-      end
-    when "note_multipart"
-      note['subnotes'].each_with_index do |subnote, i|
-        if subnote.has_key?("content")
-          if subnote['content'].include?("’")
-            subnote['content'] = subnote['content'].gsub('’', '\'')
-            flag = 1
-            note['subnotes'][i]['content'] = subnote['content']
-          end
-        end
-      end
+  if record['terms'][0]['term_type'] == "genre_form"
+    if record['title'].end_with?('.')
+      title = record['title'].chomp('.')
+      record['title'] = title
     end
-    record['notes'][x] = note
+    flag = 1
   end
 
   if flag == 1
@@ -84,9 +71,9 @@ resources.each do |resource|
 
     # puts whether the process succeeded or not
     if resp.code == "200"
-      puts "Success: resources/#{resource.to_s}"
+      puts "Success: subjects/#{id.to_s}"
     else
-      puts "Error: resources/#{resource.to_s}"
+      puts "Error: subjects/#{id.to_s}"
     end
   end
 end
