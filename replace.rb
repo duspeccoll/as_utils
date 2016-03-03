@@ -54,11 +54,11 @@ ids.each do |id|
   record = JSON.parse(resp.body)
 
   if record['terms'][0]['term_type'] == "genre_form"
-    if record['title'].end_with?('.')
-      title = record['title'].chomp('.')
-      record['title'] = title
+    if record['terms'][0]['term'].end_with?('.')
+      str = record['terms'][0]['term'].chomp('.')
+      record['terms'][0]['term'] = str
+      flag = 1
     end
-    flag = 1
   end
 
   if flag == 1
