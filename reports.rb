@@ -1,3 +1,5 @@
+#!/usr/bin/env ruby
+
 require 'yaml'
 require 'io/console'
 require 'net/http'
@@ -38,7 +40,6 @@ def run_report(type, data_model, params)
     ids = JSON.parse(ids.body)
     case type
     # generic JSON output
-    # the generic JSON output writes to a single file per data model; all others output indiv. records
     when "json"
       case data_model
       when /subjects/, /^agents/

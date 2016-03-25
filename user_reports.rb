@@ -1,3 +1,5 @@
+#!/usr/bin/env ruby
+
 require 'mysql2'
 require 'io/console'
 
@@ -15,7 +17,7 @@ print "Enter end date: "
 to = gets.chomp
 users = client.query("SELECT username FROM user").each do |row|
   # this is hard-coded to write to the 'reports' subfolder in my home directory
-  file_output = "/home/kevin/reports/#{row['username'].gsub(/\./,'_')}_#{from.gsub(/-/,'')}-#{to.gsub(/-/,'')}.txt"
+  file_output = "/Users/jackflaps/reports/#{row['username'].gsub(/\./,'_')}_#{from.gsub(/-/,'')}-#{to.gsub(/-/,'')}.txt"
   records = client.query("SELECT x.title, x.id, x.uri FROM(
     SELECT title, identifier id, CONCAT('#{frontend}/resources/', id) uri, created_by, create_time, last_modified_by, user_mtime FROM resource WHERE repo_id=2
     UNION

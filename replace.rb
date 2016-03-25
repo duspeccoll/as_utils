@@ -1,3 +1,4 @@
+#!/usr/bin/env ruby
 # We wrote a replace script because we needed to make a bunch of post-migration
 # edits that aren't possible through the Batch Find/Replace Beta right now.
 
