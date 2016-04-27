@@ -48,13 +48,18 @@ def run_report(type, data_model, params)
         url = "#{params['url']}/#{config['repo']}/#{data_model}"
       end
       data_model = data_model.gsub(/agents\//,'')
+      file_output = "#{config['file_path']}/json/#{data_model}_report.json"
+      File.delete(file_output) if File.exist?(file_output)
+      f = File.open(file_output, 'a')
+      f.write("{\"#{data_model}\":[")
       ids.each_with_index do |id, i|
         print "Writing #{data_model} #{type} record #{i+1} of #{ids.length}... \r"
-        file_output = "#{config['file_path']}/json/#{data_model}/#{id}.json"
-        File.delete(file_output) if File.exist?(file_output)
         resp = get_record(uri, URI("#{url}/#{id}"), params)
-        File.open(file_output, 'w') { |f| f.write resp.body.chomp }
+        f.write(resp.body.chomp)
+        f.write(",") unless i == ids.length - 1
       end
+      f.write("]}")
+      f.close unless f.nil?
     # Encoded Archival Context (EAC) output
     when "eac"
       data_model = data_model.gsub(/agents\//,'').gsub('software', 'softwares')
@@ -83,7 +88,14 @@ def run_report(type, data_model, params)
       url = "#{params['url']}/#{config['repo']}/#{data_model}/mods"
       ids.each_with_index do |id, i|
         print "Writing #{type} record #{i+1} of #{ids.length}... \r"
-        file_output = "#{config['file_path']}/mods/#{id}_mods.xml"
+        resp = get_record(uri, URI("#{params['url']}/#{config['repo']}/#{data_model}/#{id}"), params)
+        digital_object_id = JSON.parse(resp.body)['digital_object_id']
+        if digital_object_id.match(/.+(codu:\d+)$/)
+          handle = $1.gsub(/:/,'_')
+          file_output = "#{config['file_path']}/mods/#{handle}.xml"
+        else
+          file_output = "#{config['file_path']}/mods/#{id}_mods.xml"
+        end
         File.delete(file_output) if File.exist?(file_output)
         resp = get_record(uri, URI("#{url}/#{id}.xml"), params)
         File.open(file_output, 'w') { |f| f.write resp.body }
