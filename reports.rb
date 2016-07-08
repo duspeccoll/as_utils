@@ -139,7 +139,7 @@ def aspace_login
 end
 
 def select_data_model
-  print "Select a data model:\n* (1) Resources\n* (2) Archival Objects\n* (3) Agents\n* (4) Subjects\n* (5) Digital Objects\n> "
+  print "Select a data model:\n* (1) Resources\n* (2) Archival Objects\n* (3) Agents\n* (4) Subjects\n* (5) Digital Objects\n* (6) Accessions\n> "
   data_model = gets.chomp.to_i
   case data_model
   when 1
@@ -152,6 +152,8 @@ def select_data_model
     return "subjects"
   when 5
     return "digital_objects"
+  when 6
+    return "accessions"
   else
     puts "Invalid entry, try again."
     select_data_model
