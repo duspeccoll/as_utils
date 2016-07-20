@@ -57,7 +57,6 @@ records.each do |record|
     end
 
     unless url == ''
-      puts "working on #{url}"
       req = Net::HTTP::Get.new(URI("#{params['url']}#{url}"))
       req['X-ArchivesSpace-Session'] = params['token']
       resp = Net::HTTP.start(uri.host, uri.port) { |http| http.request(req) }
@@ -78,9 +77,9 @@ records.each do |record|
       req.body = resource.to_json
       resp = Net::HTTP.start(uri.host, uri.port) { |http| http.request(req) }
       if resp.code == "200"
-        puts "Success: #{id}"
+        puts "Success: #{id} (#{url})"
       else
-        puts "Error: #{id}"
+        puts "Error: #{id} (#{url})"
       end
     end
   end
