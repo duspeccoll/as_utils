@@ -8,14 +8,14 @@ require 'net/http'
 require 'uri'
 
 def get_token(params)
-  unless params['token']
+  unless params['login'] && ['password']
     print "login: "
     params['login'] = gets.chomp
     print "password: "
     params['password'] = STDIN.noecho(&:gets).chomp
     print "\n"
   end
-  uri = URI("#{params['url']}/users/#{params['login']}/login")
+  uri = URI("#{params['url']}users/#{params['login']}/login")
   resp = Net::HTTP.post_form(uri, 'password' => params['password'])
   case resp.code
   when "200"
@@ -27,10 +27,11 @@ def get_token(params)
 end
 
 def get_request(obj, params, opts = {})
+  uri = URI(params['url'])
   req = Net::HTTP::Get.new(obj)
   req.set_form_data(opts) unless opts.empty?
   req['X-ArchivesSpace-Session'] = params['token']
-  resp = Net::HTTP.start(params['uri'].host, params['uri'].port) { |http| http.request(req) }
+  resp = Net::HTTP.start(uri.host, uri.port) { |http| http.request(req) }
   case resp.code
   when "200"
     return resp
@@ -47,11 +48,12 @@ def get_request(obj, params, opts = {})
 end
 
 def post_request(obj, record, params, opts = {})
+  uri = URI(params['url'])
   req = Net::HTTP::Post.new(obj)
   req['X-ArchivesSpace-Session'] = params['token']
   req['Content-Type'] = opts[:content_type]
   req.body = record.to_json
-  resp = Net::HTTP.start(params['uri'].host, params['uri'].port) { |http| http.request(req) }
+  resp = Net::HTTP.start(uri.host, uri.port) { |http| http.request(req) }
   if resp.code == "200"
     return resp
   else
@@ -60,7 +62,7 @@ def post_request(obj, record, params, opts = {})
 end
 
 def get_data_model
-  print "Select a data model:\n* (1) Resources\n* (2) Archival Objects\n* (3) Agents\n* (4) Subjects\n* (5) Digital Objects\n* (6) Accessions\n* (7) Top Containers\n> "
+  print "Select a data model:\n* (1) Resources\n* (2) Archival Objects\n* (3) Agents\n* (4) Subjects\n* (5) Digital Objects\n* (6) Accessions\n* (7) Top Containers\n* (8) Container Profiles\n> "
   data_model = gets.chomp.to_i
   case data_model
   when 1
@@ -77,6 +79,8 @@ def get_data_model
     return "accessions"
   when 7
     return "top_containers"
+  when 8
+    return "container_profiles"
   else
     puts "Invalid entry, try again."
     get_data_model
@@ -125,12 +129,18 @@ def get_report_type(data_model)
   end
 end
 
+def write_file(filename, record_url, params)
+  File.delete(filename) if File.exist?(filename)
+  resp = get_request(record_url, params)
+  File.open(filename, 'w') { |f| f.write(resp.body) }
+end
+
 def run_report(type, data_model, params)
   request_url = case data_model
-  when /subjects/, /^agents/
-    "#{params['url']}/#{data_model}"
+  when /subjects/, /^agents/, /container_profiles/
+    "#{params['url']}#{data_model}"
   else
-    "#{params['url']}/#{params['repo']}/#{data_model}"
+    "#{params['repo_url']}#{data_model}"
   end
   ids = JSON.parse(get_request(URI("#{request_url}"), params, { 'all_ids' => true }).body)
   data_model = data_model.gsub(/agents\//,'').gsub('software', 'softwares')
@@ -154,7 +164,7 @@ def run_report(type, data_model, params)
 
   # Encoded Archival Context (EAC) output
   when "eac"
-    url = "#{params['url']}/#{params['repo']}/archival_contexts/#{data_model}"
+    url = "#{params['repo_url']}archival_contexts/#{data_model}"
     ids.each_with_index do |id, i|
       print "Writing #{type} record #{i+1} of #{ids.length}... \r"
       file_output = "#{params['path']}/eac/#{data_model}_#{id}_eac.xml"
@@ -165,26 +175,19 @@ def run_report(type, data_model, params)
 
   # MARCXML output
   when "marc"
-    url = "#{params['url']}/#{params['repo']}/#{data_model}/marc21"
+    url = "#{params['repo_url']}#{data_model}/"
     ids.each_with_index do |id, i|
       print "Writing #{type} record #{i+1} of #{ids.length}... \r"
-      resp = get_record(uri, URI("#{params['url']}/#{config['repo']}/#{data_model}/#{id}"), params)
-      num = JSON.parse(resp.body)['id_0'].downcase
-      file_output = "#{params['path']}/marc/#{num}_marc.xml"
-      File.delete(file_output) if File.exist?(file_output)
-      resp = get_request(URI("#{url}/#{id}.xml"), params)
-      File.open(file_output, 'w') { |f| f.write resp.body }
+      num = JSON.parse(get_request(URI("#{url}#{id}"), params).body)['id_0'].downcase
+      write_file("#{params['path']}/marc/#{num}_marc.xml", URI("#{url}marc21/#{id}.xml"), params)
     end
 
   # Encoded Archival Description output
   when "ead"
-    url = "#{params['url']}/#{params['repo']}/resource_descriptions"
+    url = "#{params['repo_url']}resource_descriptions/"
     ids.each_with_index do |id, i|
       print "Writing #{type} record #{i+1} of #{ids.length}... \r"
-      file_output = "#{params['path']}/ead/#{id}_ead.xml"
-      File.delete(file_output) if File.exist?(file_output)
-      resp = get_request(URI("#{url}/#{id}.xml"), params)
-      File.open(file_output, 'w') { |f| f.write resp.body }
+      write_file("#{params['path']}/ead/#{id}_ead.xml", URI("#{url}#{id}.xml"), params)
     end
   end
 
