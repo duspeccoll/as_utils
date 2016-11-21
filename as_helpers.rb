@@ -15,7 +15,7 @@ def get_token(params)
     params['password'] = STDIN.noecho(&:gets).chomp
     print "\n"
   end
-  uri = URI("#{params['url']}users/#{params['login']}/login")
+  uri = URI("#{params['url']}/users/#{params['login']}/login")
   resp = Net::HTTP.post_form(uri, 'password' => params['password'])
   case resp.code
   when "200"
