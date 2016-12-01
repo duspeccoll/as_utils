@@ -187,7 +187,8 @@ def run_report(type, data_model, params)
     url = "#{params['repo_url']}resource_descriptions/"
     ids.each_with_index do |id, i|
       print "Writing #{type} record #{i+1} of #{ids.length}... \r"
-      write_file("#{params['path']}/ead/#{id}_ead.xml", URI("#{url}#{id}.xml"), params)
+      num = JSON.parse(get_request(URI("#{url}#{id}"), params).body)['id_0'].downcase
+      write_file("#{params['path']}/ead/#{num}_ead.xml", URI("#{url}#{id}.xml"), params)
     end
   end
 
