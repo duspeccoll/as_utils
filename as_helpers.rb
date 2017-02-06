@@ -61,74 +61,6 @@ def post_request(obj, record, params, opts = {})
   end
 end
 
-def get_data_model
-  print "Select a data model:\n* (1) Resources\n* (2) Archival Objects\n* (3) Agents\n* (4) Subjects\n* (5) Digital Objects\n* (6) Accessions\n* (7) Top Containers\n* (8) Container Profiles\n> "
-  data_model = gets.chomp.to_i
-  case data_model
-  when 1
-    return "resources"
-  when 2
-    return "archival_objects"
-  when 3
-    return "agents"
-  when 4
-    return "subjects"
-  when 5
-    return "digital_objects"
-  when 6
-    return "accessions"
-  when 7
-    return "top_containers"
-  when 8
-    return "container_profiles"
-  else
-    puts "Invalid entry, try again."
-    get_data_model
-  end
-end
-
-def get_report_type(data_model)
-  puts "Select report type:"
-  case data_model
-  when "resources"
-    print "* (1) Generic JSON\n* (2) EAD\n* (3) MARC\n> "
-    type = gets.chomp.to_i
-    case type
-    when 1
-      return "json"
-    when 2
-      return "ead"
-    when 3
-      return "marc"
-    else
-      puts "Invalid entry, try again."
-      get_report_type(data_model)
-    end
-  when "agents"
-    print "* (1) Generic JSON\n* (2) EAC-CPF\n> "
-    type = gets.chomp.to_i
-    case type
-    when 1
-      return "json"
-    when 2
-      return "eac"
-    else
-      puts "Invalid entry, try again."
-      get_report_type(data_model)
-    end
-  else
-    print "* (1) Generic JSON\n> "
-    type = gets.chomp.to_i
-    case type
-    when 1
-      return "json"
-    else
-      puts "Invalid entry, try again."
-      get_report_type(data_model)
-    end
-  end
-end
-
 def write_file(filename, record_url, params)
   File.delete(filename) if File.exist?(filename)
   resp = get_request(record_url, params)
@@ -140,7 +72,7 @@ def run_report(type, data_model, params)
   when /subjects/, /^agents/, /container_profiles/
     "#{params['url']}#{data_model}"
   else
-    "#{params['repo_url']}#{data_model}"
+    "#{params['url']}#{params['repo']}/#{data_model}"
   end
   ids = JSON.parse(get_request(URI("#{request_url}"), params, { 'all_ids' => true }).body)
   data_model = data_model.gsub(/agents\//,'').gsub('software', 'softwares')
