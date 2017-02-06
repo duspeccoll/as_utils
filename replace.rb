@@ -6,12 +6,13 @@ require 'io/console'
 require 'json'
 require 'net/http'
 require 'uri'
+require 'date'
 require_relative 'as_helpers'
 
 params = {
-  'url' => "http://localhost:8089/",
-  'repo_url' => "http://localhost:8089/repositories/2/"
-  'logfile' => "logfile.txt"
+  'url' => "http://localhost:8089",
+  'repo_url' => "http://localhost:8089/repositories/2/",
+  'logfile' => "log_#{DateTime.now.strftime("%Y%m%d_%H%M%S")}.txt"
 }
 
 params['token'] = get_token(params)
@@ -19,25 +20,24 @@ params['token'] = get_token(params)
 File.delete(params['logfile']) if File.exist?(params['logfile'])
 
 # pick a data model to work on and grab its IDs
-ids = get_request(URI("#{params['url']}/repositories/2/top_containers"), params, {'all_ids' => true})
+ids = JSON.parse(get_request(URI("#{params['url']}/repositories/2/digital_objects"), params, {'all_ids' => true}).body)
 
 # iterate over the ids and work on just the ones that match our conditions
 ids.each do |id|
-  record_url = URI("#{params['url']}/repositories/2/top_containers/#{id.to_s}")
+  record_url = URI("#{params['url']}/repositories/2/digital_objects/#{id.to_s}")
   record = get_request(record_url, params)
-  indicator = record['indicator']
+  json = JSON.parse(record.body)
 
-  if indicator.match(/\.\d{2}\./)
-    log_string = "#{indicator} => "
-    indicator.sub!(/\.\d{2}\.\d{2}\./,'.') if indicator.match(/\.\d{2}\.\d{2}\./)
-    indicator.sub!(/\.\d{2}\./,'.')
-    log_string << "#{indicator}"
-    record['indicator'] = indicator
-    resp = post_request(record_url, record, params, {'content_type' => "application/json"})
-    if resp.code == "200"
-      File.open(params['logfile'], 'a') { |f| f.puts(log_string) }
-    else
-      puts "Error: top_containers/#{id.to_s}"
-    end
+  json['notes'] = []
+  json['linked_agents'] = []
+  json['dates'] = []
+  json['extents'] = []
+  json['subjects'] = []
+
+  resp = post_request(record_url, json, params, {'content_type' => "application/json"})
+  if resp.code == "200"
+    File.open(params['logfile'], 'a') { |f| f.puts("Success: digital_objects/#{id.to_s}") }
+  else
+    File.open(params['logfile'], 'a') { |f| f.puts("Error: digital_objects/#{id.to_s}") }
   end
 end
