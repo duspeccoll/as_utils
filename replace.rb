@@ -23,7 +23,8 @@ File.delete(params['logfile']) if File.exist?(params['logfile'])
 ids = JSON.parse(get_request(URI("#{params['url']}/repositories/2/digital_objects"), params, {'all_ids' => true}).body)
 
 # iterate over the ids and work on just the ones that match our conditions
-ids.each do |id|
+ids.each_with_index do |id, i|
+  print "Processing record #{i+1} of #{ids.length}... \r"
   record_url = URI("#{params['url']}/repositories/2/digital_objects/#{id.to_s}")
   record = get_request(record_url, params)
   json = JSON.parse(record.body)
@@ -41,3 +42,5 @@ ids.each do |id|
     File.open(params['logfile'], 'a') { |f| f.puts("Error: digital_objects/#{id.to_s}") }
   end
 end
+
+puts "\nDone."
