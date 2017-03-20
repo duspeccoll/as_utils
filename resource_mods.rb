@@ -2,37 +2,35 @@
 
 require 'json'
 require 'nokogiri'
-require_relative 'as_helpers'
+require_relative 'astools'
 
-def get_child_mods(object, params)
-  uri = "#{params['repo_id']}archival_objects/mods/#{object['id']}.xml"
+def get_child_mods(child)
   filename = ""
-  if object['component_id']
-    filename << "#{params['path']}/#{object['component_id'].gsub(/\./,'_')}.xml"
+  if child['component_id']
+    filename << "#{@path}/#{child['component_id']}.xml"
   else
-    filename << "#{params['path']}/#{object['id']}.xml"
+    filename << "#{@path}/#{child['id']}.xml"
   end
-  if object['level'] == "item"
-    mods = Nokogiri::XML(get_request(URI(uri), params).body)
+  if child['level'] == "item"
+    mods = Nokogiri::XML(ASTools::HTTP.get_data("#{@repo}/archival_objects/mods/#{child['id']}.xml"))
     File.delete(filename) if File.exist?(filename)
     File.open(filename, 'w') { |f| f.write(mods.to_xml) }
   end
-  object['children'].each do |child|
-    get_child_mods(child, params)
+  child['children'].each do |child|
+    get_child_mods(child)
   end
 end
 
-params = {
-  'url' => "http://localhost:8089",
-  'repo_id' => "http://localhost:8089/repositories/2/",
-}
+@repo = "/repositories/2"
 
-params['token'] = get_token(params)
+ASTools::User.get_session
+
 print "resource id: "
 id = gets.chomp
-params['path'] = "mods_#{id}"
-Dir.mkdir params['path'] unless Dir.exist?(params['path'])
-json = JSON.parse(get_request(URI("#{params['repo_id']}resources/#{id}/tree"), params).body)
+@path = "/home/kevin/mods_#{id}"
+Dir.mkdir(@path) unless Dir.exist?(@path)
+
+json = ASTools::HTTP.get_json("#{@repo}/resources/#{id}/tree")
 json['children'].each do |child|
-  get_child_mods(child, params)
+  get_child_mods(child)
 end

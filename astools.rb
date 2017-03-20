@@ -3,8 +3,6 @@ require 'json'
 require 'uri'
 require 'io/console'
 
-# eventually this will supersede as_helpers.rb in my scripts but I need to test it more
-
 module ASTools
 
   def self.backend_url
