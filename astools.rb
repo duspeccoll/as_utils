@@ -63,6 +63,19 @@ module ASTools
       do_http_request(url, req)
     end
 
+    def self.get_data(uri, params = {})
+      uri = URI("#{backend_url}#{uri}")
+      uri.query = URI.encode_www_form(params)
+
+      response = get_response(uri)
+
+      if response.is_a?(Net::HTTPSuccess) || response.code == "200"
+        response.body
+      else
+        nil
+      end
+    end
+
     def self.get_json(uri, params = {})
       uri = URI("#{backend_url}#{uri}")
       uri.query = URI.encode_www_form(params)
