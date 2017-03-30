@@ -17,6 +17,7 @@ module ASTools
   module User
 
     def self.get_session(opts = {})
+      puts "Logging into ArchivesSpace at #{ASTools.backend_url}... "
       unless opts[:login]
         print "login: "
         opts[:login] = gets.chomp
