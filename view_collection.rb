@@ -9,6 +9,7 @@ require 'nokogiri'
 require_relative 'astools'
 
 @repo = "/repositories/2"
+solr_url = "" # set this to whatever your Solr URL is
 log = "view_collection_log.txt"
 
 def get_request(url)
@@ -36,7 +37,7 @@ end
 
 def items_for_pid(pid)
   items = []
-  resp = get_request("http://librepo01-vlp.du.edu:8080/solr/collection1/select?q=RELS_EXT_isMemberOfCollection_uri_ms%3A%22info%3Afedora%2Fcodu%3A#{pid}%22&rows=500&wt=xml&indent=true")
+  resp = get_request("#{solr_url}/collection1/select?q=RELS_EXT_isMemberOfCollection_uri_ms%3A%22info%3Afedora%2Fcodu%3A#{pid}%22&rows=500&wt=xml&indent=true")
   if resp.is_a?(Net::HTTPSuccess) || resp.code == "200"
     xml = Nokogiri::XML(resp.body)
     results = xml.xpath("//response//result[@name='response']//doc")
