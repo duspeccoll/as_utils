@@ -70,6 +70,9 @@ module ASTools
 
       if response.is_a?(Net::HTTPSuccess) || response.code == "200"
         response.body
+      elsif response.code == "412"
+        puts "Session expired or not found. Refreshing..."
+        ASTools::User.get_session
       else
         nil
       end
