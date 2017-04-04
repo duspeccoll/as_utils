@@ -8,7 +8,7 @@ require_relative 'astools'
 
 # this is why no one should write a DACS 2.4 validator for dates
 @months = /(January|February|March|April|May|June|July|August|September|October|November|December)/
-@dacs_date = /^((((before|after|circa)\s)?(((((early|mid|late|early-mid|mid-late)\s)|mid-)?((\d{4}s)|(\d+(st|nd|th)(-\d+(st|nd|th))?\scentury)))|(\d{4}(\s#{@months}(\s\d+(-\d+)?)?)?)))|((((between|circa|before)\s)?(((((early|mid|late|early-mid|mid-late)\s)|mid-)?((\d{4}s)|(\d+(st|nd|th)\scentury)))|(\d{4}(\s#{@months}(\s\d+(-\d+)?)?)?))-(after|circa)?(((((early|mid|late|early-mid|mid-late)\s)|mid-)?((\d{4}s)|(\d+(st|nd|th)\scentury)))|(\d{4}(\s#{@months}(\s\d+)?)?)))|(((between|circa|before)\s)?\d{4}\s#{@months}(\s\d+(-\d+)?)?-(after)?#{@months}(\s\d+(-\d+)?)?)|(((between|circa)\s)?\d{4}\s#{@months}\s\d+-\d+)))((,| or)\s((((before|after|circa)\s)?(((((early|mid|late|early-mid|mid-late)\s)|mid-)?\d{4}s)|(\d{4}(\s#{@months}(\s\d+)?)?)))|(((between|circa|before)\s)?((\d{4}(s|(\s#{@months}(\s\d+)?))?-(after)?\d{4}(s|(\s#{@months}(\s\d+)?))?)|(\d{4}\s#{@months}(\s\d+)?-#{@months}(\s\d+)?)|(\d{4}\s#{@months}\s\d+-\d+)))))?( and undated)?$/
+@dacs_date = /^((((((before|after|circa)\s)?(((((early|mid|late|early-mid|mid-late)\s)|mid-)?((\d{4}s)|(\d+(st|nd|th)(-\d+(st|nd|th))?\scentury)))|(\d{4}(\s#{@months}(\s\d+(-\d+)?)?)?)))|((((between|circa|before)\s)?(((((early|mid|late|early-mid|mid-late)\s)|mid-)?((\d{4}s)|(\d+(st|nd|th)\scentury)))|(\d{4}(\s#{@months}(\s\d+)?)?))-((after|circa)\s)?(((((early|mid|late|early-mid|mid-late)\s)|mid-)?((\d{4}s)|(\d+(st|nd|th)\scentury)))|(\d{4}(\s#{@months}(\s\d+)?)?)))|(((between|circa|before)\s)?\d{4}\s#{@months}(\s\d+)?-((after|circa)\s)?#{@months}(\s\d+)?)|(((between|circa)\s)?\d{4}\s#{@months}\s\d+-\d+)))((,|\sor)\s((((before|after|circa)\s)?(((((early|mid|late|early-mid|mid-late)\s)|mid-)?\d{4}s)|(\d{4}(\s#{@months}(\s\d+)?)?)))|(((between|circa|before)\s)?((\d{4}(s|(\s#{@months}(\s\d+)?))?-(after)?\d{4}(s|(\s#{@months}(\s\d+)?))?)|(\d{4}\s#{@months}(\s\d+)?-#{@months}(\s\d+)?)|(\d{4}\s#{@months}\s\d+-\d+)))))?( and undated)?)|various dates)$/
 
 # here are some hashes and arrays for cleanup tasks
 @downcases = ["circa", "before", "after", "between", "early", "mid", "late"]
@@ -16,18 +16,20 @@ undateds = ["Date Not Yet Determined", "UNKNOWN", "Unknown", "unknown", "N/A", "
 
 # hash to spell out month abbreviations
 @mos = {
-  /Jan(\.|\s)/ => "January",
-  /Feb(\.|\s)/ => "February",
-  /Mar(\.|\s)/ => "March",
-  /Apr(\.|\s)/ => "April",
-  /Jun\s/ => "June",
-  /Jul\s/ => "July",
-  /Aug(\.|\s)/ => "August",
-  /Sept(\.|\s)/ => "September",
-  /Oct(\.|\s)/ => "October",
-  /Nov(\.|\s)/ => "November",
-  /Dec(\.|\s)/ => "December"
+  /Jan\./ => "January",
+  /Feb\./ => "February",
+  /Mar\./ => "March",
+  /Apr\./ => "April",
+  /Jun\s/ => "June ",
+  /Jul\s/ => "July ",
+  /Aug\./ => "August",
+  /Sept\./ => "September",
+  /Oct\./ => "October",
+  /Nov\./ => "November",
+  /Dec\./ => "December"
 }
+
+log = "date_cleanup_log.txt"
 
 # check if a date validates against that monstrous DACS validation regexp
 def is_dacs?(str)
@@ -50,6 +52,7 @@ def cleanup(str)
   str.gsub!(/(betwen|betweem|beetween|betweeen)/,"between")
   str.gsub!(/between/,"between ") if /between\d/.match(str)
   str.gsub!(/, (U|u)ndated/, " and undated") if /, (U|u)ndated$/.match(str)
+  str.gsub!(/^Various (D|d)ates$/, "various dates")
 
   # insert or modify date range prefixes (before, after, circa)
   str = "after #{str.gsub(/-/,'')}" if str.end_with?("-")
@@ -88,7 +91,7 @@ def fix_single_date(str)
     str.gsub!(/,/,'')
     month = str.scan(/\w+/)[0]
     date = str.scan(/\d+-\d+/)[0]
-    str.gsub!(/^\w+\s\d+-\d+/,'')
+    str.gsub!(/^\w+\s\d+-\d+\s/,'')
     str = "#{str} #{month} #{date}"
 
   # slash date ranges within a single month, e.g. "1/1-14/1995"
@@ -97,9 +100,17 @@ def fix_single_date(str)
     str = "#{expr[2]} #{DateTime.strptime(expr[0], '%m').strftime("%B")} #{expr[1].gsub(/0(\d{1})/,'\1')}"
 
   # months or month ranges within a single year, e.g. "January 1995" or "January-March 1995"
-  elsif /^#{@months}(-#{@months})?\s\d{4}/.match(str)
+  elsif /^#{@months}(-#{@months})?(,)?\s\d{4}/.match(str)
+    str.gsub!(/,/,'')
     year = str.scan(/\d{4}/)[0]
     str = "#{year} #{str.gsub!(/\s\d{4}$/,'')}"
+
+  # slash date month ranges within a single year, e.g. "01-03/1995"
+  elsif /^\d{2}-\d{2}\/\d{4}$/.match(str)
+    year = str.scan(/\d{4}/)[0]
+    expr = str.gsub(/\/\d{4}$/,'').split(/-/).map!{|sstr| sstr = "#{sstr}/#{year}"}
+    str = expr.join("-")
+    str = fix_date_range(str)
 
   # any other single date (using the DateTime class to parse them)
   else
@@ -146,8 +157,8 @@ end
 
 ASTools::User.get_session
 
-File.delete('log.txt') if File.exist?('log.txt')
-f = File.open('log.txt', 'a')
+File.delete(log) if File.exist?(log)
+f = File.open(log, 'a')
 
 begin
   ids = ASTools::HTTP.get_json("/repositories/2/archival_objects", 'all_ids' => true)
