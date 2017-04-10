@@ -8,7 +8,7 @@ require_relative 'astools'
 
 # this is why no one should write a DACS 2.4 validator for dates
 @months = /(January|February|March|April|May|June|July|August|September|October|November|December)/
-@dacs_date = /^((((((before|after|circa)\s)?(((((early|mid|late|early-mid|mid-late)\s)|mid-)?((\d{4}s)|(\d+(st|nd|th)(-\d+(st|nd|th))?\scentury)))|(\d{4}(\s#{@months}(\s\d+(-\d+)?)?)?)))|((((between|circa|before)\s)?(((((early|mid|late|early-mid|mid-late)\s)|mid-)?((\d{4}s)|(\d+(st|nd|th)\scentury)))|(\d{4}(\s#{@months}(\s\d+)?)?))-((after|circa)\s)?(((((early|mid|late|early-mid|mid-late)\s)|mid-)?((\d{4}s)|(\d+(st|nd|th)\scentury)))|(\d{4}(\s#{@months}(\s\d+)?)?)))|(((between|circa|before)\s)?\d{4}\s#{@months}(\s\d+)?-((after|circa)\s)?#{@months}(\s\d+)?)|(((between|circa)\s)?\d{4}\s#{@months}\s\d+-\d+)))((,|\sor)\s((((before|after|circa)\s)?(((((early|mid|late|early-mid|mid-late)\s)|mid-)?\d{4}s)|(\d{4}(\s#{@months}(\s\d+)?)?)))|(((between|circa|before)\s)?((\d{4}(s|(\s#{@months}(\s\d+)?))?-(after)?\d{4}(s|(\s#{@months}(\s\d+)?))?)|(\d{4}\s#{@months}(\s\d+)?-#{@months}(\s\d+)?)|(\d{4}\s#{@months}\s\d+-\d+)))))?( and undated)?)|various dates)$/
+@dacs_date = /^((((((before|after|circa)\s)?(((((early|mid|late|early-mid|mid-late)\s)|mid-)?(((\[)?\d{4}s(\])?)|(\d+(st|nd|th)(-\d+(st|nd|th))?\scentury)))|((\[)?\d{4}(\])?(\s#{@months}(\s\d+(-\d+)?)?)?)))|((((between|circa|before)\s)?(((((early|mid|late|early-mid|mid-late)\s)|mid-)?((\d{4}s)|(\d+(st|nd|th)\scentury)))|((\[)?\d{4}(\])?(\s#{@months}(\s\d+)?)?))-((after|circa)\s)?(((((early|mid|late|early-mid|mid-late)\s)|mid-)?((\d{4}s)|(\d+(st|nd|th)\scentury)))|((\[)?\d{4}(\])?(\s#{@months}(\s\d+)?)?)))|(((between|circa|before)\s)?(\[)?\d{4}(\])?\s#{@months}(\s\d+)?-((after|circa)\s)?#{@months}(\s\d+)?)|(((between|circa)\s)?(\[)?\d{4}(\])?\s#{@months}\s\d+-\d+)))((,|\sor)\s((((before|after|circa)\s)?(((((early|mid|late|early-mid|mid-late)\s)|mid-)?\d{4}s)|((\[)?\d{4}(\])?(\s#{@months}(\s\d+)?)?)))|(((between|circa|before)\s)?((\d{4}(s|(\s#{@months}(\s\d+)?))?-(after)?\d{4}(s|(\s#{@months}(\s\d+)?))?)|(\d{4}\s#{@months}(\s\d+)?-#{@months}(\s\d+)?)|(\d{4}\s#{@months}\s\d+-\d+)))))?( and undated)?)|various dates)$/
 
 # here are some hashes and arrays for cleanup tasks
 @downcases = ["circa", "before", "after", "between", "early", "mid", "late"]
@@ -63,6 +63,69 @@ def cleanup(str)
   str.gsub!(/^Around/,"circa") if str.start_with?("Around")
 
   str
+end
+
+def set_range_date(str)
+  range_date = case
+  when /^\d{4}$/.match(str)
+    str
+  when /^\d{4}\s#{@months}$/.match(str)
+    Date.strptime(str, '%Y %B').strftime("%Y-%m")
+  when /^\d{4}\s#{@months}\s\d(\d)?$/.match(str)
+    Date.strptime(str, '%Y %B %d').strftime("%Y-%m-%d")
+  else
+    nil
+  end
+
+  range_date
+end
+    
+def set_range_dates(str)
+  range = {}
+  if /-/.match(str)
+    if /^\d{4}\s#{@months}\s\d(\d)?-\d(\d)?$/.match(str)
+      puts str
+      range['begin'] = Date.strptime(str.gsub(/-\d+$/,''), '%Y %B %d').strftime("%Y-%m-%d")
+      range['end'] = Date.strptime(str.gsub(/\d+?-/,''), '%Y %B %d').strftime("%Y-%m-%d")
+    else
+      str.gsub!(/between\s/,'') if str.start_with?("between")
+      expr = str.split(/-/)
+      if /^\d{4}s$/.match(expr[0])
+        range['begin'] = expr[0].gsub(/\ds$/,'0')
+      elsif /^circa\s\d{4}$/.match(expr[0])
+        range['begin'] = ((expr[0].gsub(/circa\s/,'').to_i)-5).to_s
+      else
+        range['begin'] = set_range_date(expr[0])
+      end
+
+      if /^\d{4}s$/.match(expr[1])
+        range['end'] = expr[1].gsub(/\ds$/,'9')
+      elsif /^circa\s\d{4}$/.match(expr[1])
+        range['end'] = ((expr[1].gsub(/circa\s/,'').to_i)+5).to_s
+      else
+        range['end'] = set_range_date(expr[1])
+      end
+    end
+  else
+    if /^before\s\d{4}$/.match(str)
+      range['begin'] = ""
+      range['end'] = str.gsub(/before\s/,'')
+    elsif /^after\s\d{4}$/.match(str)
+      range['begin'] = str.gsub(/after\s/,'')
+    elsif /^\d{4}s$/.match(str)
+      str.gsub!(/\ds$/,'')
+      range['begin'] = str.gsub(/\ds$/,'0')
+      range['end'] = str.gsub(/\ds$/,'9')
+    elsif /^circa\s\d{4}$/.match(str)
+      int = str.gsub(/circa\s/,'').to_i
+      range['begin'] = (int-5).to_s
+      range['end'] = (int+5).to_s
+    else
+      range['begin'] = set_range_date(str)
+    end
+  end
+
+  range
 end
 
 # this does the cleanup for single dates
@@ -168,36 +231,46 @@ begin
     json['dates'].each {|date|
       unless date['expression'].nil?
         if is_dacs?(date['expression'])
-          f.puts "#{component_id}: #{date['expression']} already DACS-compliant"
+          range = set_range_dates(date['expression'])
+          range_str = "(begin: #{range['begin']}"
+          range_str << ", end: #{range['end']}" unless range['end'].nil?
+          range_str << ")"
+          f.puts "#{component_id}: #{date['expression']} already DACS-compliant #{range_str}"
         else
           if undateds.include?(date['expression'])
-            f.puts "#{component_id}: #{date['expression']} classified as 'undated,' removing"
+            #f.puts "#{component_id}: #{date['expression']} classified as 'undated,' removing"
           else
             old_expr = date['expression']
             expr = cleanup(old_expr) # clean up punctuation and spelling mistakes
 
             if is_dacs?(expr) # if the date is already valid per DACS 2.4, don't do anything else with it
-              f.puts "#{component_id}: #{old_expr} => #{expr} [is DACS]"
+              range = set_range_dates(expr)
+              range_str = "(begin: #{range['begin']}"
+              range_str << ", end: #{range['end']}" unless range['end'].nil?
+              range_str << ")"
+              f.puts "#{component_id}: #{old_expr} => #{expr} [is DACS] #{range_str}"
             else
               # if there's a dash in the date expression we check if it's a date range or not
               if /^#{@months}\s\d+(,\s\d{4})?-#{@months}\s\d+(,\s\d{4})?$/.match(expr)
                 expr = fix_date_range(expr)
               elsif /^(\w+\s)?\d+\/(\d+\/)?\d{4}-\d+\/(\d+\/)?\d{4}$/.match(expr)
                 expr = fix_date_range(expr)
-              #elsif /^(\w+\s)?\d+\/\d{4}-\d+\/\d{4}$/.match(expr)
-              #  expr = fix_date_range(expr)
               else
                 expr = fix_single_date(expr)
               end
 
               # finish up
               if is_dacs?(expr)
-                f.puts "#{component_id}: #{old_expr} => #{expr} [is DACS]"
+                range = set_range_dates(expr)
+                range_str = "(begin: #{range['begin']}"
+                range_str << ", end: #{range['end']}" unless range['end'].nil?
+                range_str << ")"
+                f.puts "#{component_id}: #{old_expr} => #{expr} [is DACS] #{range_str}"
               else
                 if expr.start_with?("Had some trouble")
-                  f.puts "#{component_id}: #{expr}"
+                  #f.puts "#{component_id}: #{expr}"
                 else
-                  f.puts "#{component_id}: #{old_expr} => #{expr} [is NOT DACS]"
+                  #f.puts "#{component_id}: #{old_expr} => #{expr} [is NOT DACS]"
                 end
               end
             end
