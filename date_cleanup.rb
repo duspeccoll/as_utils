@@ -83,8 +83,8 @@ end
 def set_range_dates(str)
   range = {}
   if /-/.match(str)
+    range['type'] = "inclusive"
     if /^\d{4}\s#{@months}\s\d(\d)?-\d(\d)?$/.match(str)
-      puts str
       range['begin'] = Date.strptime(str.gsub(/-\d+$/,''), '%Y %B %d').strftime("%Y-%m-%d")
       range['end'] = Date.strptime(str.gsub(/\d+?-/,''), '%Y %B %d').strftime("%Y-%m-%d")
     else
@@ -108,19 +108,30 @@ def set_range_dates(str)
     end
   else
     if /^before\s\d{4}$/.match(str)
+      range['type'] = "inclusive"
       range['begin'] = ""
       range['end'] = str.gsub(/before\s/,'')
     elsif /^after\s\d{4}$/.match(str)
+      range['type'] = "inclusive"
       range['begin'] = str.gsub(/after\s/,'')
+      range['end'] = ""
     elsif /^\d{4}s$/.match(str)
       str.gsub!(/\ds$/,'')
+      range['type'] = "inclusive"
       range['begin'] = str.gsub(/\ds$/,'0')
       range['end'] = str.gsub(/\ds$/,'9')
-    elsif /^circa\s\d{4}$/.match(str)
-      int = str.gsub(/circa\s/,'').to_i
-      range['begin'] = (int-5).to_s
-      range['end'] = (int+5).to_s
+    elsif /^circa\s\d{4}(s)?$/.match(str)
+      range['type'] = "inclusive"
+      if str.end_with?("s")
+        range['begin'] = ((str.gsub(/circa\s/,'').gsub(/\ds$/,'0').to_i)-5).to_s
+        range['end'] = ((str.gsub(/circa\s/,'').(/\ds$/,'9').to_i)+6).to_s
+      else
+        int = str.gsub(/circa\s/,'').to_i
+        range['begin'] = (int-5).to_s
+        range['end'] = (int+5).to_s
+      end
     else
+      range['type'] = "single"
       range['begin'] = set_range_date(str)
     end
   end
@@ -232,23 +243,23 @@ begin
       unless date['expression'].nil?
         if is_dacs?(date['expression'])
           range = set_range_dates(date['expression'])
-          range_str = "(begin: #{range['begin']}"
+          range_str = "(#{range['type']}; begin: #{range['begin']}"
           range_str << ", end: #{range['end']}" unless range['end'].nil?
           range_str << ")"
-          f.puts "#{component_id}: #{date['expression']} already DACS-compliant #{range_str}"
+          f.puts "#{component_id}: #{date['expression']} #{range_str}"
         else
           if undateds.include?(date['expression'])
-            #f.puts "#{component_id}: #{date['expression']} classified as 'undated,' removing"
+            f.puts "#{component_id}: removing \"#{date['expression']}\" because undated"
           else
             old_expr = date['expression']
             expr = cleanup(old_expr) # clean up punctuation and spelling mistakes
 
             if is_dacs?(expr) # if the date is already valid per DACS 2.4, don't do anything else with it
               range = set_range_dates(expr)
-              range_str = "(begin: #{range['begin']}"
+              range_str = "(#{range['type']}; begin: #{range['begin']}"
               range_str << ", end: #{range['end']}" unless range['end'].nil?
               range_str << ")"
-              f.puts "#{component_id}: #{old_expr} => #{expr} [is DACS] #{range_str}"
+              f.puts "#{component_id}: #{old_expr} => #{expr} #{range_str}"
             else
               # if there's a dash in the date expression we check if it's a date range or not
               if /^#{@months}\s\d+(,\s\d{4})?-#{@months}\s\d+(,\s\d{4})?$/.match(expr)
@@ -262,15 +273,15 @@ begin
               # finish up
               if is_dacs?(expr)
                 range = set_range_dates(expr)
-                range_str = "(begin: #{range['begin']}"
+                range_str = "(#{range['type']}; begin: #{range['begin']}"
                 range_str << ", end: #{range['end']}" unless range['end'].nil?
                 range_str << ")"
-                f.puts "#{component_id}: #{old_expr} => #{expr} [is DACS] #{range_str}"
+                f.puts "#{component_id}: #{old_expr} => #{expr} #{range_str}"
               else
                 if expr.start_with?("Had some trouble")
-                  #f.puts "#{component_id}: #{expr}"
+                  f.puts "#{component_id}: #{expr}"
                 else
-                  #f.puts "#{component_id}: #{old_expr} => #{expr} [is NOT DACS]"
+                  f.puts "#{component_id}: #{old_expr} => #{expr} [NOT DACS]"
                 end
               end
             end
