@@ -123,8 +123,10 @@ def set_range_dates(str)
     elsif /^circa\s\d{4}(s)?$/.match(str)
       range['type'] = "inclusive"
       if str.end_with?("s")
-        range['begin'] = ((str.gsub(/circa\s/,'').gsub(/\ds$/,'0').to_i)-5).to_s
-        range['end'] = ((str.gsub(/circa\s/,'').(/\ds$/,'9').to_i)+6).to_s
+        bint = str.gsub(/circa\s/,'').gsub(/\ds$/,'0').to_i
+        eint = str.gsub(/circa\s/,'').gsub(/\ds$/,'9').to_i
+        range['begin'] = (bint-5).to_s
+        range['end'] = (eint+6).to_s
       else
         int = str.gsub(/circa\s/,'').to_i
         range['begin'] = (int-5).to_s
