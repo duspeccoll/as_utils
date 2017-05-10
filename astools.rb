@@ -51,8 +51,8 @@ module ASTools
     end
 
     def self.do_http_request(url, req)
+      req['X-ArchivesSpace-Session'] = current_backend_session
       begin
-        req['X-ArchivesSpace-Session'] = current_backend_session
         response = Net::HTTP.start(url.host, url.port) {|http| http.request(req)}
       rescue StandardError
         puts "Connection lost. Retrying in ten seconds... "
