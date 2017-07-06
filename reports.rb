@@ -17,7 +17,8 @@ data_model_opts = {
   '5' => "digital_objects",
   '6' => "accessions",
   '7' => "top_containers",
-  '8' => "container_profiles"
+  '8' => "container_profiles",
+  '9' => "events"
 }
 
 agent_types = ["people", "corporate_entities", "families", "software"]

@@ -68,7 +68,7 @@ module ASTools
     end
 
     def self.get_data(uri, params = {})
-      uri = URI("#{backend_url}#{uri}")
+      uri = URI.parse(URI.encode("#{backend_url}#{uri}"))
       uri.query = URI.encode_www_form(params)
 
       response = get_response(uri)
@@ -84,7 +84,7 @@ module ASTools
     end
 
     def self.get_json(uri, params = {})
-      uri = URI("#{backend_url}#{uri}")
+      uri = URI.parse(URI.encode("#{backend_url}#{uri}"))
       uri.query = URI.encode_www_form(params)
 
       response = get_response(uri)
@@ -100,7 +100,7 @@ module ASTools
     end
 
     def self.post_json(uri, json)
-      uri = URI("#{backend_url}#{uri}")
+      uri = URI.parse(URI.encode("#{backend_url}#{uri}"))
       req = Net::HTTP::Post.new(uri)
       req['Content-Type'] = "application/json"
       req.body = json.to_json
